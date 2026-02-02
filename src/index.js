@@ -98,7 +98,7 @@ Health ───> GET /health (axum)`, 'text', 'architecture')}
   <li><strong>Rust toolchain</strong> — install via <a href="https://rustup.rs" target="_blank" rel="noopener">rustup.rs</a></li>
   <li><strong>SQLite</strong> — typically pre-installed on macOS/Linux</li>
   <li><strong>Telegram bot token</strong> — create via <a href="https://t.me/BotFather" target="_blank" rel="noopener">@BotFather</a></li>
-  <li><strong>LLM API key</strong> — from OpenAI, Anthropic, Google, OpenRouter, or use local Ollama</li>
+  <li><strong>LLM API key</strong> — from Google AI Studio, OpenAI, Anthropic, OpenRouter, or use local Ollama</li>
 </ul>
 
 <h2>Steps</h2>
@@ -151,10 +151,10 @@ ${codeBlock(`./target/release/aidaemon --help`, 'bash')}
 <table class="config-table">
 <thead><tr><th>Provider</th><th>Base URL</th><th>Default Models</th></tr></thead>
 <tbody>
+<tr><td><strong>Google AI Studio (Native)</strong></td><td>Native API</td><td>gemini-3-flash-preview / gemini-2.5-flash-lite / gemini-3-pro-preview</td></tr>
 <tr><td>OpenAI</td><td><code>https://api.openai.com/v1</code></td><td>gpt-4o / gpt-4o-mini / gpt-4o</td></tr>
 <tr><td>Anthropic (Native)</td><td>Native API</td><td>claude-3.5-sonnet / claude-3-haiku / claude-3-opus</td></tr>
 <tr><td>Anthropic (OpenRouter)</td><td><code>https://openrouter.ai/api/v1</code></td><td>anthropic/claude-* variants</td></tr>
-<tr><td>Google AI Studio (Native)</td><td>Native API</td><td>gemini-3-flash-preview / gemini-2.5-flash-lite / gemini-3-pro-preview</td></tr>
 <tr><td>OpenRouter</td><td><code>https://openrouter.ai/api/v1</code></td><td>Mixed providers</td></tr>
 <tr><td>Ollama (local)</td><td><code>http://localhost:11434/v1</code></td><td>Auto-discovered from local instance</td></tr>
 <tr><td>Custom</td><td>User-specified</td><td>User-specified</td></tr>
@@ -192,16 +192,16 @@ ${callout('info', 'Ollama Auto-Discovery', 'When selecting Ollama, the wizard qu
 
 <h2>[provider]</h2>
 ${configTable([
-  ['kind', 'string', '"openai_compatible"', 'Provider type: <code>openai_compatible</code>, <code>google_genai</code>, or <code>anthropic</code>'],
+  ['kind', 'string', '"google_genai"', 'Provider type: <code>google_genai</code>, <code>openai_compatible</code>, or <code>anthropic</code>'],
   ['api_key', 'string', '—', 'API key for the provider (required)'],
-  ['base_url', 'string', '"https://api.openai.com/v1"', 'API base URL'],
+  ['base_url', 'string', '—', 'API base URL (required for <code>openai_compatible</code>, not used for native providers)'],
 ])}
 
 <h2>[provider.models]</h2>
 ${configTable([
-  ['primary', 'string', '"openai/gpt-4o"', 'Default model for general queries'],
-  ['fast', 'string', '"openai/gpt-4o-mini"', 'Model for simple/quick queries'],
-  ['smart', 'string', '"openai/gpt-4o"', 'Model for complex reasoning tasks'],
+  ['primary', 'string', '"gemini-3-flash-preview"', 'Default model for general queries'],
+  ['fast', 'string', '"gemini-2.5-flash-lite"', 'Model for simple/quick queries'],
+  ['smart', 'string', '"gemini-3-pro-preview"', 'Model for complex reasoning tasks'],
 ])}
 
 ${callout('info', 'Model Routing', 'When all three tiers use the same model, auto-routing is disabled. See <a href="/router">Model Routing</a> for classification details.')}
@@ -294,14 +294,13 @@ ${configTable([
 
 <h2>Example Config</h2>
 ${codeBlock(`[provider]
-kind = "openai_compatible"
-api_key = "sk-..."
-base_url = "https://api.openai.com/v1"
+kind = "google_genai"
+api_key = "AIza..."
 
 [provider.models]
-primary = "gpt-4o"
-fast = "gpt-4o-mini"
-smart = "o1-preview"
+primary = "gemini-3-flash-preview"
+fast = "gemini-2.5-flash-lite"
+smart = "gemini-3-pro-preview"
 
 [telegram]
 bot_token = "123456:ABC-DEF..."
@@ -340,7 +339,20 @@ enabled = true`, 'toml', 'config.toml')}
 
 <h2>Provider Kinds</h2>
 
-<h3>openai_compatible (default)</h3>
+<h3>google_genai (recommended)</h3>
+<p>Native Google Generative AI API. The recommended provider — Gemini models offer excellent tool-use capabilities, fast response times, and generous free-tier API access via <a href="https://aistudio.google.com/" target="_blank" rel="noopener">Google AI Studio</a>.</p>
+${codeBlock(`[provider]
+kind = "google_genai"
+api_key = "AIza..."
+
+[provider.models]
+primary = "gemini-3-flash-preview"
+fast = "gemini-2.5-flash-lite"
+smart = "gemini-3-pro-preview"`, 'toml')}
+
+${callout('info', 'Recommended Setup', 'Google AI Studio provides a free API key with generous rate limits. Gemini models have native tool-calling support and work well with aidaemon&rsquo;s agentic loop.')}
+
+<h3>openai_compatible</h3>
 <p>Works with any API that implements the OpenAI chat completions format. This includes OpenAI, OpenRouter, Ollama, and many others.</p>
 ${codeBlock(`[provider]
 kind = "openai_compatible"
@@ -362,17 +374,6 @@ api_key = "sk-ant-..."
 primary = "claude-3.5-sonnet"
 fast = "claude-3-haiku"
 smart = "claude-3-opus"`, 'toml')}
-
-<h3>google_genai</h3>
-<p>Native Google Generative AI API. Use this for direct Gemini access.</p>
-${codeBlock(`[provider]
-kind = "google_genai"
-api_key = "AIza..."
-
-[provider.models]
-primary = "gemini-3-flash-preview"
-fast = "gemini-2.5-flash-lite"
-smart = "gemini-3-pro-preview"`, 'toml')}
 
 <h2>OpenRouter</h2>
 <p>OpenRouter provides access to models from multiple providers through a single API key and the OpenAI-compatible format.</p>
@@ -700,7 +701,7 @@ password = "***REDACTED***"`, 'toml')}
 <p>Read a specific TOML key path:</p>
 ${codeBlock(`action: "get"
 key: "provider.models.primary"
-# Returns: "gpt-4o"`, 'text')}
+# Returns: "gemini-3-flash-preview"`, 'text')}
 
 <h3>set</h3>
 <p>Update a specific key with a new value (TOML literal format):</p>
@@ -1073,9 +1074,9 @@ When reviewing code, follow these guidelines:
 <table class="config-table">
 <thead><tr><th>Tier</th><th>Use Case</th><th>Typical Model</th></tr></thead>
 <tbody>
-<tr><td><strong>Fast</strong></td><td>Simple greetings, yes/no, short lookups</td><td>gpt-4o-mini, claude-3-haiku, gemini-2.5-flash-lite</td></tr>
-<tr><td><strong>Primary</strong></td><td>General conversation, moderate tasks</td><td>gpt-4o, claude-3.5-sonnet, gemini-3-flash-preview</td></tr>
-<tr><td><strong>Smart</strong></td><td>Complex reasoning, code generation, analysis</td><td>o1-preview, claude-3-opus, gemini-3-pro-preview</td></tr>
+<tr><td><strong>Fast</strong></td><td>Simple greetings, yes/no, short lookups</td><td>gemini-2.5-flash-lite, gpt-4o-mini, claude-3-haiku</td></tr>
+<tr><td><strong>Primary</strong></td><td>General conversation, moderate tasks</td><td>gemini-3-flash-preview, gpt-4o, claude-3.5-sonnet</td></tr>
+<tr><td><strong>Smart</strong></td><td>Complex reasoning, code generation, analysis</td><td>gemini-3-pro-preview, o1-preview, claude-3-opus</td></tr>
 </tbody>
 </table>
 
