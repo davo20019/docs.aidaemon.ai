@@ -1924,7 +1924,7 @@ export default {
     return new Response(layout(page), {
       headers: {
         'content-type': 'text/html;charset=UTF-8',
-        'cache-control': 'public, max-age=3600',
+        'cache-control': 'public, max-age=60, s-maxage=300',
       },
     });
   },
