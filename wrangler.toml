@@ -1,0 +1,7 @@
+name = "aidaemon-docs"
+main = "src/index.js"
+compatibility_date = "2024-12-01"
+
+routes = [
+  { pattern = "docs.aidaemon.ai", custom_domain = true }
+]
