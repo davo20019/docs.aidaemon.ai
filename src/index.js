@@ -151,9 +151,9 @@ ${codeBlock(`./target/release/aidaemon --help`, 'bash')}
 <table class="config-table">
 <thead><tr><th>Provider</th><th>Base URL</th><th>Default Models</th></tr></thead>
 <tbody>
-<tr><td><strong>Google AI Studio (Native)</strong></td><td>Native API</td><td>gemini-3-flash-preview / gemini-2.5-flash-lite / gemini-3-pro-preview</td></tr>
-<tr><td>OpenAI</td><td><code>https://api.openai.com/v1</code></td><td>gpt-4o / gpt-4o-mini / gpt-4o</td></tr>
-<tr><td>Anthropic (Native)</td><td>Native API</td><td>claude-3.5-sonnet / claude-3-haiku / claude-3-opus</td></tr>
+<tr><td><strong>Google AI Studio (Native)</strong></td><td>Native API</td><td>gemini-2.5-flash</td></tr>
+<tr><td>OpenAI</td><td><code>https://api.openai.com/v1</code></td><td>openai/gpt-4o</td></tr>
+<tr><td>Anthropic (Native)</td><td>Native API</td><td>claude-sonnet-4-20250514</td></tr>
 <tr><td>Anthropic (OpenRouter)</td><td><code>https://openrouter.ai/api/v1</code></td><td>anthropic/claude-* variants</td></tr>
 <tr><td>OpenRouter</td><td><code>https://openrouter.ai/api/v1</code></td><td>Mixed providers</td></tr>
 <tr><td>Ollama (local)</td><td><code>http://localhost:11434/v1</code></td><td>Auto-discovered from local instance</td></tr>
@@ -199,12 +199,12 @@ ${configTable([
 
 <h2>[provider.models]</h2>
 ${configTable([
-  ['primary', 'string', '"gemini-3-flash-preview"', 'Default model for general queries'],
-  ['fast', 'string', '"gemini-2.5-flash-lite"', 'Model for simple/quick queries'],
-  ['smart', 'string', '"gemini-3-pro-preview"', 'Model for complex reasoning tasks'],
+  ['primary', 'string', '(provider default)', 'Default model for general queries'],
+  ['fast', 'string', '(same as primary)', 'Model for simple/quick queries'],
+  ['smart', 'string', '(same as primary)', 'Model for complex reasoning tasks'],
 ])}
 
-${callout('info', 'Model Routing', 'When all three tiers use the same model, auto-routing is disabled. See <a href="/router">Model Routing</a> for classification details.')}
+${callout('info', 'Model Defaults', 'If <code>fast</code> and <code>smart</code> are not set, they default to the same value as <code>primary</code>. Provider defaults: <strong>google_genai</strong> → gemini-2.5-flash, <strong>openai_compatible</strong> → openai/gpt-4o, <strong>anthropic</strong> → claude-sonnet-4-20250514. When all three tiers use the same model, auto-routing is disabled. See <a href="/router">Model Routing</a> for details.')}
 
 <h2>[telegram]</h2>
 ${configTable([
@@ -217,11 +217,15 @@ ${configTable([
   ['db_path', 'string', '"aidaemon.db"', 'Path to SQLite database file'],
   ['working_memory_cap', 'integer', '50', 'Max messages per session kept in memory'],
   ['consolidation_interval_hours', 'integer', '6', 'Hours between memory consolidation runs'],
+  ['max_facts', 'integer', '100', 'Maximum number of facts injected into the system prompt'],
+  ['encryption_key', 'string', 'null', 'SQLCipher encryption key (requires <code>encryption</code> feature). AES-256 at rest.'],
 ])}
 
 <h2>[terminal]</h2>
 ${configTable([
   ['allowed_prefixes', 'array', '(see below)', 'Command prefixes auto-approved without user confirmation'],
+  ['initial_timeout_secs', 'integer', '30', 'Timeout in seconds for initial command execution'],
+  ['max_output_chars', 'integer', '4000', 'Truncate command output beyond this length'],
 ])}
 
 <p>Default allowed prefixes:</p>
@@ -298,9 +302,9 @@ kind = "google_genai"
 api_key = "AIza..."
 
 [provider.models]
-primary = "gemini-3-flash-preview"
-fast = "gemini-2.5-flash-lite"
-smart = "gemini-3-pro-preview"
+primary = "gemini-2.5-flash"
+fast = "gemini-2.5-flash"
+smart = "gemini-2.5-pro"
 
 [telegram]
 bot_token = "123456:ABC-DEF..."
@@ -309,6 +313,7 @@ allowed_user_ids = [123456789]
 [state]
 db_path = "aidaemon.db"
 working_memory_cap = 50
+max_facts = 100
 
 [terminal]
 allowed_prefixes = ["ls", "cat", "head", "tail", "echo", "date", "whoami"]
@@ -346,9 +351,9 @@ kind = "google_genai"
 api_key = "AIza..."
 
 [provider.models]
-primary = "gemini-3-flash-preview"
-fast = "gemini-2.5-flash-lite"
-smart = "gemini-3-pro-preview"`, 'toml')}
+primary = "gemini-2.5-flash"
+fast = "gemini-2.5-flash"
+smart = "gemini-2.5-pro"`, 'toml')}
 
 ${callout('info', 'Recommended Setup', 'Google AI Studio provides a free API key with generous rate limits. Gemini models have native tool-calling support and work well with aidaemon&rsquo;s agentic loop.')}
 
@@ -371,9 +376,9 @@ kind = "anthropic"
 api_key = "sk-ant-..."
 
 [provider.models]
-primary = "claude-3.5-sonnet"
-fast = "claude-3-haiku"
-smart = "claude-3-opus"`, 'toml')}
+primary = "claude-sonnet-4-20250514"
+fast = "claude-haiku-4-20250414"
+smart = "claude-opus-4-20250414"`, 'toml')}
 
 <h2>OpenRouter</h2>
 <p>OpenRouter provides access to models from multiple providers through a single API key and the OpenAI-compatible format.</p>
@@ -383,9 +388,9 @@ api_key = "sk-or-..."
 base_url = "https://openrouter.ai/api/v1"
 
 [provider.models]
-primary = "anthropic/claude-3.5-sonnet"
-fast = "anthropic/claude-3-haiku"
-smart = "anthropic/claude-3-opus"`, 'toml')}
+primary = "anthropic/claude-sonnet-4-20250514"
+fast = "anthropic/claude-haiku-4-20250414"
+smart = "anthropic/claude-opus-4-20250414"`, 'toml')}
 
 <h2>Ollama (Local)</h2>
 <p>Run models locally with Ollama. No API key required.</p>
@@ -597,7 +602,13 @@ ${codeBlock(`ls, cat, head, tail, echo, date, whoami, pwd, find, wc,
 grep, tree, file, stat, uname, df, du, ps, which, env, printenv`, 'text')}
 
 <h2>Output</h2>
-<p>Returns stdout first, then stderr (if any). Output is truncated to 4000 characters.</p>
+<p>Returns stdout first, then stderr (if any). Output is truncated to <code>terminal.max_output_chars</code> (default 4000 characters).</p>
+
+<h2>Configuration</h2>
+${codeBlock(`[terminal]
+allowed_prefixes = ["ls", "cat", "head", "tail", "echo", "date"]
+initial_timeout_secs = 30
+max_output_chars = 4000`, 'toml', 'config.toml')}
 
 <h2>Allow Always</h2>
 <p>When the user clicks "Allow Always" in Telegram, the command prefix is added to <code>terminal.allowed_prefixes</code> in config.toml. Future commands with the same prefix are auto-approved.</p>
@@ -654,7 +665,7 @@ ${configTable([
 <p>Facts are upserted into the <code>facts</code> table in SQLite. The <code>(category, key)</code> pair is unique — storing a fact with the same category and key overwrites the previous value.</p>
 
 <h2>System Prompt Injection</h2>
-<p>All facts are injected into the system prompt under a <code>## Known Facts</code> section, grouped by category. This means the agent always has access to its stored knowledge.</p>
+<p>Up to <code>state.max_facts</code> (default 100) facts are injected into the system prompt under a <code>## Known Facts</code> section, grouped by category and ordered by most recently updated. This means the agent always has access to its stored knowledge.</p>
 
 ${codeBlock(`## Known Facts
 
@@ -701,7 +712,7 @@ password = "***REDACTED***"`, 'toml')}
 <p>Read a specific TOML key path:</p>
 ${codeBlock(`action: "get"
 key: "provider.models.primary"
-# Returns: "gemini-3-flash-preview"`, 'text')}
+# Returns: "gemini-2.5-flash"`, 'text')}
 
 <h3>set</h3>
 <p>Update a specific key with a new value (TOML literal format):</p>
@@ -957,6 +968,27 @@ command = "python3"
 args = ["/path/to/my_mcp_server.py"]`, 'toml')}
 
 ${callout('info', 'Stderr Logging', 'MCP server stderr output is captured and logged by aidaemon for debugging. Check the daemon logs if a server isn\'t working.')}
+
+<h2>Threat Detection</h2>
+<p>aidaemon performs audit-only threat detection on MCP tool calls. Suspicious patterns are logged but <strong>do not block execution</strong>.</p>
+
+<h3>Suspicious Argument Patterns</h3>
+<ul>
+  <li><strong>File access:</strong> <code>/etc/passwd</code>, <code>/etc/shadow</code>, <code>.ssh/</code>, <code>.env</code></li>
+  <li><strong>Config/secrets:</strong> <code>config.toml</code>, <code>aidaemon.db</code>, <code>api_key</code>, <code>bot_token</code>, <code>encryption_key</code></li>
+  <li><strong>Network:</strong> <code>curl</code>, <code>wget</code>, <code>nc</code>, <code>base64</code></li>
+  <li><strong>Code execution:</strong> <code>eval(</code>, <code>exec(</code>, <code>| sh</code>, <code>| bash</code></li>
+  <li><strong>Destructive:</strong> <code>; rm </code>, <code>chmod 777</code></li>
+</ul>
+
+<h3>Suspicious Output Patterns</h3>
+<ul>
+  <li>Potential API keys: <code>sk-</code>, <code>ghp_</code> prefixes</li>
+  <li>Private keys: <code>-----BEGIN</code>, <code>PRIVATE KEY</code></li>
+  <li>Sensitive terms: <code>password</code>, <code>bot_token</code></li>
+</ul>
+
+${callout('warn', 'Audit Only', 'Threat detection is informational — it logs warnings but does not block tool execution. Check your daemon logs for any flagged patterns.')}
 `
   },
   {
@@ -1039,7 +1071,7 @@ ${configTable([
 ])}
 
 <h2>Matching</h2>
-<p>Trigger matching is case-insensitive substring matching. If any trigger keyword appears anywhere in the user's message, the skill activates.</p>
+<p>Trigger matching is whole-word, case-insensitive. If any trigger keyword appears as a complete word in the user&rsquo;s message, the skill activates. A fast LLM confirmation step can optionally validate relevance (fail-open if the check fails).</p>
 
 <h2>System Prompt Injection</h2>
 <p>When skills are loaded, the system prompt is enhanced with:</p>
@@ -1074,9 +1106,9 @@ When reviewing code, follow these guidelines:
 <table class="config-table">
 <thead><tr><th>Tier</th><th>Use Case</th><th>Typical Model</th></tr></thead>
 <tbody>
-<tr><td><strong>Fast</strong></td><td>Simple greetings, yes/no, short lookups</td><td>gemini-2.5-flash-lite, gpt-4o-mini, claude-3-haiku</td></tr>
-<tr><td><strong>Primary</strong></td><td>General conversation, moderate tasks</td><td>gemini-3-flash-preview, gpt-4o, claude-3.5-sonnet</td></tr>
-<tr><td><strong>Smart</strong></td><td>Complex reasoning, code generation, analysis</td><td>gemini-3-pro-preview, o1-preview, claude-3-opus</td></tr>
+<tr><td><strong>Fast</strong></td><td>Simple greetings, yes/no, short lookups</td><td>gemini-2.5-flash, gpt-4o-mini, claude-haiku-4</td></tr>
+<tr><td><strong>Primary</strong></td><td>General conversation, moderate tasks</td><td>gemini-2.5-flash, gpt-4o, claude-sonnet-4</td></tr>
+<tr><td><strong>Smart</strong></td><td>Complex reasoning, code generation, analysis</td><td>gemini-2.5-pro, o1-preview, claude-opus-4</td></tr>
 </tbody>
 </table>
 
@@ -1153,6 +1185,14 @@ When reviewing code, follow these guidelines:
 
 ${callout('info', 'Last Known Good', 'After every successful LLM call, the current config is saved as <code>config.toml.lastgood</code>. This enables automatic recovery from bad config changes.')}
 
+<h2>Message Ordering Fixup</h2>
+<p>To satisfy constraints across Gemini, Anthropic, and OpenAI providers, aidaemon runs a three-pass fixup on the message history before each LLM call:</p>
+<ol>
+  <li><strong>Pass 1:</strong> Merge consecutive same-role messages (combines tool_calls arrays)</li>
+  <li><strong>Pass 2:</strong> Drop orphaned tool results (no matching assistant tool_call) and strip orphaned tool_calls (no matching tool result)</li>
+  <li><strong>Pass 3:</strong> Merge again after orphan removal may create new consecutive same-role messages</li>
+</ol>
+
 <h2>Tool Execution</h2>
 <p>During the loop, each tool call receives:</p>
 <ul>
@@ -1207,6 +1247,19 @@ ${configTable([
   ['source', 'TEXT', '""', 'Who stored it: "agent" or "user"'],
   ['created_at', 'TEXT', '—', 'RFC3339 timestamp'],
   ['updated_at', 'TEXT', '—', 'RFC3339 timestamp'],
+])}
+
+<h3>macros table</h3>
+${configTable([
+  ['id', 'INTEGER PK', 'auto', 'Auto-incrementing primary key'],
+  ['trigger_tool', 'TEXT', '&mdash;', 'Tool that triggers the macro'],
+  ['trigger_args_pattern', 'TEXT', 'null', 'Arguments pattern to match'],
+  ['next_tool', 'TEXT', '&mdash;', 'Tool to chain next'],
+  ['next_args', 'TEXT', '&mdash;', 'Arguments for the chained tool'],
+  ['confidence', 'REAL', '0.0', 'Confidence score for the macro'],
+  ['used_count', 'INTEGER', '0', 'Number of times the macro has been used'],
+  ['created_at', 'TEXT', '&mdash;', 'RFC3339 timestamp'],
+  ['updated_at', 'TEXT', '&mdash;', 'RFC3339 timestamp'],
 ])}
 
 <h2>Working Memory</h2>
