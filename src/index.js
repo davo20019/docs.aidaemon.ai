@@ -1073,9 +1073,9 @@ When reviewing code, follow these guidelines:
 <table class="config-table">
 <thead><tr><th>Tier</th><th>Use Case</th><th>Typical Model</th></tr></thead>
 <tbody>
-<tr><td><strong>Fast</strong></td><td>Simple greetings, yes/no, short lookups</td><td>gpt-4o-mini, claude-3-haiku</td></tr>
-<tr><td><strong>Primary</strong></td><td>General conversation, moderate tasks</td><td>gpt-4o, claude-3.5-sonnet</td></tr>
-<tr><td><strong>Smart</strong></td><td>Complex reasoning, code generation, analysis</td><td>o1-preview, claude-3-opus</td></tr>
+<tr><td><strong>Fast</strong></td><td>Simple greetings, yes/no, short lookups</td><td>gpt-4o-mini, claude-3-haiku, gemini-2.5-flash-lite</td></tr>
+<tr><td><strong>Primary</strong></td><td>General conversation, moderate tasks</td><td>gpt-4o, claude-3.5-sonnet, gemini-3-flash-preview</td></tr>
+<tr><td><strong>Smart</strong></td><td>Complex reasoning, code generation, analysis</td><td>o1-preview, claude-3-opus, gemini-3-pro-preview</td></tr>
 </tbody>
 </table>
 
@@ -1854,69 +1854,23 @@ a:hover { color: var(--cyan); text-shadow: 0 0 8px var(--cyan-glow); }
   .page-nav-next { align-items: flex-start; }
 }
 
-/* ── SEARCH TRIGGER ── */
-.search-trigger {
+/* ── SEARCH (inline header) ── */
+.search-wrap {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.35rem 0.7rem;
+  flex: 1;
+  max-width: 320px;
+  margin: 0 1rem;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: 6px;
-  color: var(--text-dim);
-  font-family: var(--mono);
-  font-size: 0.75rem;
-  cursor: pointer;
-  transition: all 0.2s;
+  padding: 0.3rem 0.6rem;
+  transition: border-color 0.2s;
 }
-.search-trigger:hover { border-color: var(--border-bright); color: var(--text-secondary); }
-.search-trigger kbd {
-  font-family: var(--mono);
-  font-size: 0.65rem;
-  padding: 0.1rem 0.35rem;
-  background: var(--bg-deep);
-  border: 1px solid var(--border);
-  border-radius: 3px;
-  color: var(--text-dim);
-}
-.search-trigger svg { opacity: 0.6; }
+.search-wrap:focus-within { border-color: var(--green-dim); }
 
-/* ── SEARCH MODAL ── */
-.search-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  z-index: 300;
-  background: rgba(0, 0, 0, 0.65);
-  backdrop-filter: blur(4px);
-}
-.search-overlay.open { display: block; }
-
-.search-modal {
-  display: none;
-  position: fixed;
-  top: 15%;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 301;
-  width: 560px;
-  max-width: calc(100vw - 2rem);
-  background: var(--bg-surface);
-  border: 1px solid var(--border-bright);
-  border-radius: 10px;
-  overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-}
-.search-modal.open { display: block; }
-
-.search-input-wrap {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  padding: 0.8rem 1rem;
-  border-bottom: 1px solid var(--border);
-}
-.search-input-wrap svg { flex-shrink: 0; color: var(--text-dim); }
+.search-icon { flex-shrink: 0; color: var(--text-dim); opacity: 0.6; }
 
 .search-input {
   flex: 1;
@@ -1924,21 +1878,39 @@ a:hover { color: var(--cyan); text-shadow: 0 0 8px var(--cyan-glow); }
   border: none;
   outline: none;
   font-family: var(--mono);
-  font-size: 0.9rem;
+  font-size: 0.78rem;
   color: var(--text-primary);
+  padding: 0.1rem 0.5rem;
+  min-width: 0;
 }
 .search-input::placeholder { color: var(--text-dim); }
 
-.search-esc {
+.search-kbd {
   font-family: var(--mono);
   font-size: 0.6rem;
-  padding: 0.15rem 0.4rem;
-  background: var(--bg-elevated);
+  padding: 0.1rem 0.35rem;
+  background: var(--bg-deep);
   border: 1px solid var(--border);
   border-radius: 3px;
   color: var(--text-dim);
-  cursor: pointer;
+  flex-shrink: 0;
+  pointer-events: none;
 }
+
+.search-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: -1px;
+  right: -1px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-bright);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  z-index: 250;
+}
+.search-dropdown.open { display: block; }
 
 .search-results {
   max-height: 400px;
@@ -1948,15 +1920,15 @@ a:hover { color: var(--cyan); text-shadow: 0 0 8px var(--cyan-glow); }
 }
 
 .search-hint {
-  padding: 2rem 1rem;
+  padding: 1.5rem 1rem;
   text-align: center;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: var(--text-dim);
 }
 
 .search-result {
   display: block;
-  padding: 0.65rem 1rem;
+  padding: 0.55rem 0.85rem;
   border-bottom: 1px solid var(--border);
   transition: background 0.1s;
   text-decoration: none;
@@ -1965,7 +1937,7 @@ a:hover { color: var(--cyan); text-shadow: 0 0 8px var(--cyan-glow); }
 .search-result:last-child { border-bottom: none; }
 
 .search-result-title {
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   font-weight: 500;
   color: var(--text-primary);
   margin-bottom: 0.1rem;
@@ -1974,15 +1946,15 @@ a:hover { color: var(--cyan); text-shadow: 0 0 8px var(--cyan-glow); }
 .search-result.active .search-result-title { color: var(--green); }
 
 .search-result-section {
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   color: var(--text-dim);
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  margin-bottom: 0.2rem;
+  margin-bottom: 0.15rem;
 }
 
 .search-result-snippet {
-  font-size: 0.73rem;
+  font-size: 0.7rem;
   color: var(--text-secondary);
   line-height: 1.5;
   overflow: hidden;
@@ -2007,8 +1979,8 @@ a:hover { color: var(--cyan); text-shadow: 0 0 8px var(--cyan-glow); }
   .docs-content { padding: 1.5rem 1rem 2.5rem; }
   .config-table { font-size: 0.72rem; }
   .config-table td, .config-table th { padding: 0.4rem 0.5rem; }
-  .search-trigger-text { display: none; }
-  .search-trigger kbd { display: none; }
+  .search-wrap { max-width: none; margin: 0 0.5rem; }
+  .search-kbd { display: none; }
 }
 </style>
 </head>
@@ -2020,11 +1992,12 @@ a:hover { color: var(--cyan); text-shadow: 0 0 8px var(--cyan-glow); }
     <span class="tag">docs</span>
   </a>
   <button class="hamburger" onclick="toggleSidebar()" aria-label="Toggle sidebar">☰</button>
-  <button class="search-trigger" onclick="openSearch()" aria-label="Search">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-    <span class="search-trigger-text">Search</span>
-    <kbd>⌘K</kbd>
-  </button>
+  <div class="search-wrap" id="searchWrap">
+    <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input type="text" class="search-input" id="searchInput" placeholder="Search..." autocomplete="off" />
+    <kbd class="search-kbd" id="searchKbd">⌘K</kbd>
+    <div class="search-dropdown" id="searchDropdown"></div>
+  </div>
   <nav class="header-links">
     <a href="https://aidaemon.ai">home</a>
     <a href="/">docs</a>
@@ -2050,53 +2023,50 @@ a:hover { color: var(--cyan); text-shadow: 0 0 8px var(--cyan-glow); }
   </main>
 </div>
 
-<div class="search-overlay" id="searchOverlay" onclick="closeSearch()"></div>
-<div class="search-modal" id="searchModal">
-  <div class="search-input-wrap">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-    <input type="text" class="search-input" id="searchInput" placeholder="Search documentation..." autocomplete="off" />
-    <kbd class="search-esc" onclick="closeSearch()">esc</kbd>
-  </div>
-  <div class="search-results" id="searchResults"></div>
-</div>
-
 <script>
 var searchIndex = ${buildSearchIndex()};
+var dd = document.getElementById('searchDropdown');
+var si = document.getElementById('searchInput');
 
 function toggleSidebar() {
   document.getElementById('sidebar').classList.toggle('open');
   document.getElementById('sidebarOverlay').classList.toggle('open');
 }
 
-function openSearch() {
-  document.getElementById('searchOverlay').classList.add('open');
-  document.getElementById('searchModal').classList.add('open');
-  var input = document.getElementById('searchInput');
-  input.value = '';
-  input.focus();
-  renderResults('');
-}
+function openDropdown() { dd.classList.add('open'); }
+function closeDropdown() { dd.classList.remove('open'); }
 
-function closeSearch() {
-  document.getElementById('searchOverlay').classList.remove('open');
-  document.getElementById('searchModal').classList.remove('open');
-}
+si.addEventListener('focus', function() {
+  document.getElementById('searchKbd').style.display = 'none';
+  if (si.value.trim()) openDropdown();
+});
+si.addEventListener('blur', function() {
+  setTimeout(function() {
+    closeDropdown();
+    if (!si.value.trim()) document.getElementById('searchKbd').style.display = '';
+  }, 150);
+});
 
 document.addEventListener('keydown', function(e) {
   if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
     e.preventDefault();
-    openSearch();
+    si.focus();
+    si.select();
   }
-  if (e.key === 'Escape') closeSearch();
+  if (e.key === 'Escape' && document.activeElement === si) {
+    si.blur();
+  }
 });
 
-document.getElementById('searchInput').addEventListener('input', function(e) {
-  renderResults(e.target.value);
+si.addEventListener('input', function() {
+  renderResults(si.value);
+  if (si.value.trim()) openDropdown();
+  else closeDropdown();
 });
 
-document.getElementById('searchInput').addEventListener('keydown', function(e) {
-  var items = document.querySelectorAll('.search-result');
-  var active = document.querySelector('.search-result.active');
+si.addEventListener('keydown', function(e) {
+  var items = dd.querySelectorAll('.search-result');
+  var active = dd.querySelector('.search-result.active');
   var idx = Array.from(items).indexOf(active);
   if (e.key === 'ArrowDown') {
     e.preventDefault();
@@ -2109,16 +2079,13 @@ document.getElementById('searchInput').addEventListener('keydown', function(e) {
     var prev = items[idx - 1] || items[items.length - 1];
     if (prev) { prev.classList.add('active'); prev.scrollIntoView({block:'nearest'}); }
   } else if (e.key === 'Enter') {
+    e.preventDefault();
     if (active) window.location.href = active.getAttribute('href');
   }
 });
 
 function renderResults(query) {
-  var el = document.getElementById('searchResults');
-  if (!query.trim()) {
-    el.innerHTML = '<div class="search-hint">Type to search across all documentation pages</div>';
-    return;
-  }
+  if (!query.trim()) { dd.innerHTML = ''; return; }
   var q = query.toLowerCase().split(/\\s+/).filter(Boolean);
   var scored = searchIndex.map(function(page) {
     var title = page.title.toLowerCase();
@@ -2135,18 +2102,18 @@ function renderResults(query) {
   }).filter(function(r) { return r.score > 0; }).sort(function(a, b) { return b.score - a.score; });
 
   if (!scored.length) {
-    el.innerHTML = '<div class="search-hint">No results found</div>';
+    dd.innerHTML = '<div class="search-hint">No results found</div>';
     return;
   }
 
-  el.innerHTML = scored.slice(0, 10).map(function(r, i) {
+  dd.innerHTML = '<div class="search-results">' + scored.slice(0, 8).map(function(r, i) {
     var snippet = getSnippet(r.page.text, q);
     return '<a class="search-result' + (i === 0 ? ' active' : '') + '" href="' + r.page.slug + '">'
       + '<div class="search-result-title">' + r.page.title + '</div>'
       + (r.page.section ? '<div class="search-result-section">' + r.page.section + '</div>' : '')
       + '<div class="search-result-snippet">' + snippet + '</div>'
       + '</a>';
-  }).join('');
+  }).join('') + '</div>';
 }
 
 function getSnippet(text, words) {
