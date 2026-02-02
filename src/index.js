@@ -1333,22 +1333,21 @@ function renderSidebar(currentSlug) {
 
   for (const page of pages) {
     if (page.section !== currentSection) {
-      if (currentSection !== null) html += '</div></details>';
+      if (currentSection !== null) html += '</div>';
       currentSection = page.section;
       if (page.section === null) {
         const active = currentSlug === page.slug ? ' class="active"' : '';
         html += `<a href="${page.slug}"${active}>${page.title}</a>`;
         continue;
       }
-      const isOpen = pages.some(p => p.section === page.section && p.slug === currentSlug);
-      html += `<details${isOpen ? ' open' : ''}><summary>${page.section}</summary><div class="sidebar-group">`;
+      html += `<div class="sidebar-section"><div class="sidebar-label">${page.section}</div><div class="sidebar-group">`;
     }
     if (page.section !== null) {
       const active = currentSlug === page.slug ? ' class="active"' : '';
       html += `<a href="${page.slug}"${active}>${page.title}</a>`;
     }
   }
-  if (currentSection !== null) html += '</div></details>';
+  if (currentSection !== null) html += '</div></div>';
   html += '</nav>';
   return html;
 }
@@ -1533,27 +1532,18 @@ a:hover { color: var(--cyan); text-shadow: 0 0 8px var(--cyan-glow); }
 .sidebar > a:hover { color: var(--text-primary); background: var(--bg-elevated); text-shadow: none; }
 .sidebar > a.active { color: var(--green); border-left-color: var(--green); background: var(--green-glow); }
 
-.sidebar details {
-  margin-bottom: 0.25rem;
+.sidebar-section {
+  margin-bottom: 0.5rem;
 }
 
-.sidebar summary {
-  padding: 0.5rem 0.75rem;
-  font-size: 0.7rem;
+.sidebar-label {
+  padding: 0.5rem 0.75rem 0.3rem;
+  font-size: 0.68rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--text-dim);
-  cursor: pointer;
-  list-style: none;
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  transition: color 0.15s;
 }
-.sidebar summary:hover { color: var(--text-secondary); }
-.sidebar summary::before { content: '▸'; font-size: 0.65rem; transition: transform 0.15s; }
-.sidebar details[open] > summary::before { transform: rotate(90deg); }
 
 .sidebar-group {
   padding-left: 0.25rem;
