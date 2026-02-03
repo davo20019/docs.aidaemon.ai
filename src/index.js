@@ -32,12 +32,12 @@ const pages = [
 <h1>aidaemon</h1>
 <p class="lead">A personal AI agent that runs as a daemon. Always on, always learning. Chat from Telegram, extend with MCP, powered by any LLM.</p>
 
-<p>aidaemon is a self-hosted AI agent written in Rust that runs as a background service on your machine. It connects to any OpenAI-compatible LLM provider, communicates via Telegram, and can execute tools, manage its own configuration, remember facts, browse the web, and spawn sub-agents — all autonomously.</p>
+<p>aidaemon is a self-hosted AI agent written in Rust that runs as a background service on your machine. It connects to any OpenAI-compatible LLM provider, communicates via Telegram or Slack, and can execute tools, manage its own configuration, remember facts, browse the web, and spawn sub-agents — all autonomously.</p>
 
 <h2>Key Features</h2>
 <ul>
   <li><strong>Daemon architecture</strong> — runs as systemd/launchd service, always available</li>
-  <li><strong>Telegram interface</strong> — chat from any device, multi-user access control</li>
+  <li><strong>Multi-channel</strong> — chat via Telegram or Slack, multi-user access control</li>
   <li><strong>Agentic tool use</strong> — autonomous multi-step reasoning with up to 10 iterations</li>
   <li><strong>MCP integration</strong> — extend with any Model Context Protocol server</li>
   <li><strong>Persistent memory</strong> — SQLite-backed history with semantic search via embeddings</li>
@@ -57,7 +57,8 @@ const pages = [
 </ul>
 
 <h2>Architecture at a Glance</h2>
-${codeBlock(`Telegram ───> Agent ───> LLM Provider
+${codeBlock(`Telegram ──┐
+Slack    ──┤──> ChannelHub ──> Agent ──> LLM Provider
               │
               ├──> Tools
               │    ├── terminal
@@ -90,6 +91,7 @@ Health ───> GET /health (axum)`, 'text', 'architecture')}
   <li><a href="/configuration">Configuration Reference</a> — full config.toml documentation</li>
   <li><a href="/tools">Tools</a> — built-in and extensible tool system</li>
   <li><a href="/telegram">Telegram</a> — bot setup, commands, approval flow</li>
+  <li><a href="/slack">Slack</a> — workspace integration via Socket Mode</li>
 </ul>
 `
   },
@@ -133,11 +135,21 @@ cargo build --release`, 'bash')}
 
 <p>The compiled binary will be at <code>./target/release/aidaemon</code>.</p>
 
-<h2>Browser Feature (Optional)</h2>
-<p>To enable the browser automation tool (headless Chrome), build with the <code>browser</code> feature flag:</p>
-${codeBlock(`cargo build --release --features browser`, 'bash')}
+<h2>Optional Feature Flags</h2>
+<p>aidaemon supports optional features that can be enabled at compile time:</p>
 
+<h3>Browser</h3>
+<p>Enable headless Chrome automation:</p>
+${codeBlock(`cargo build --release --features browser`, 'bash')}
 ${callout('info', 'Note', 'The browser feature requires a Chromium-based browser installed on the system. Chrome, Chromium, or Brave all work.')}
+
+<h3>Slack</h3>
+<p>Enable the Slack channel integration (Socket Mode):</p>
+${codeBlock(`cargo build --release --features slack`, 'bash')}
+
+<h3>Multiple Features</h3>
+<p>Combine features as needed:</p>
+${codeBlock(`cargo build --release --features "browser,slack"`, 'bash')}
 
 <h2>Verify</h2>
 ${codeBlock(`./target/release/aidaemon --help`, 'bash')}
@@ -218,6 +230,16 @@ ${callout('info', 'Model Defaults', 'Provider-aware defaults: <strong>google_gen
 ${configTable([
   ['bot_token', 'string', '—', 'Telegram bot token from @BotFather (required)'],
   ['allowed_user_ids', 'array', '[]', 'Numeric Telegram user IDs allowed to chat. Empty = no restriction.'],
+])}
+
+<h2>[slack]</h2>
+<p>Requires the <code>slack</code> feature flag at compile time. See <a href="/slack">Slack</a> for full setup guide.</p>
+${configTable([
+  ['enabled', 'bool', 'false', 'Enable the Slack channel'],
+  ['app_token', 'string', '—', 'Slack App-Level Token for Socket Mode (<code>xapp-...</code>)'],
+  ['bot_token', 'string', '—', 'Slack Bot Token for Web API (<code>xoxb-...</code>)'],
+  ['allowed_user_ids', 'array', '[]', 'Slack user IDs allowed to interact. Empty = no restriction.'],
+  ['use_threads', 'bool', 'true', 'Reply in threads by default'],
 ])}
 
 <h2>[state]</h2>
@@ -357,7 +379,7 @@ api_key = "\${GOOGLE_API_KEY}"
 [telegram]
 bot_token = "\${TELEGRAM_BOT_TOKEN}"`, 'toml')}
 
-${callout('info', 'Supported Keychain Fields', 'Fields supporting <code>"keychain"</code>: <code>provider.api_key</code>, <code>telegram.bot_token</code>, <code>triggers.email.password</code>, <code>state.encryption_key</code>, <code>search.api_key</code>.')}
+${callout('info', 'Supported Keychain Fields', 'Fields supporting <code>"keychain"</code>: <code>provider.api_key</code>, <code>telegram.bot_token</code>, <code>slack.app_token</code>, <code>slack.bot_token</code>, <code>triggers.email.password</code>, <code>state.encryption_key</code>, <code>search.api_key</code>.')}
 
 <h2>Example Config</h2>
 ${codeBlock(`[provider]
@@ -372,6 +394,14 @@ smart = "gemini-3-pro-preview"
 [telegram]
 bot_token = "123456:ABC-DEF..."
 allowed_user_ids = [123456789]
+
+# Slack (requires --features slack)
+# [slack]
+# enabled = true
+# app_token = "xapp-..."
+# bot_token = "xoxb-..."
+# allowed_user_ids = ["U123456789"]
+# use_threads = true
 
 [state]
 db_path = "aidaemon.db"
@@ -496,7 +526,7 @@ ${callout('info', 'Ollama Discovery', 'The setup wizard auto-discovers available
     title: 'Bot Setup',
     content: () => `
 <h1>Telegram Bot Setup</h1>
-<p class="lead">aidaemon uses Telegram as its primary user interface via the teloxide framework.</p>
+<p class="lead">Telegram is aidaemon&rsquo;s primary channel, built on the teloxide framework. See also <a href="/slack">Slack</a> for workspace integration.</p>
 
 <h2>Create a Bot</h2>
 <ol>
@@ -617,6 +647,150 @@ ${callout('danger', 'Untrusted Sources', 'Sessions originating from triggers (li
 `
   },
   {
+    slug: '/slack',
+    section: 'Slack',
+    title: 'Workspace Setup',
+    content: () => `
+<h1>Slack Integration</h1>
+<p class="lead">Connect aidaemon to your Slack workspace via Socket Mode for real-time messaging. Requires the <code>slack</code> feature flag at compile time.</p>
+
+${callout('info', 'Feature Flag', 'Build with <code>cargo build --release --features slack</code> to enable Slack support.')}
+
+<h2>Create a Slack App</h2>
+<ol>
+  <li>Go to <a href="https://api.slack.com/apps" target="_blank" rel="noopener">api.slack.com/apps</a> and click <strong>Create New App</strong></li>
+  <li>Choose <strong>From scratch</strong>, name it (e.g., "aidaemon"), and select your workspace</li>
+  <li>Under <strong>Socket Mode</strong>, enable it and generate an <strong>App-Level Token</strong> with the <code>connections:write</code> scope &mdash; this is your <code>app_token</code> (<code>xapp-...</code>)</li>
+  <li>Under <strong>OAuth &amp; Permissions</strong>, add these <strong>Bot Token Scopes</strong>:
+    <ul>
+      <li><code>chat:write</code> &mdash; send messages</li>
+      <li><code>files:read</code> &mdash; download files sent by users</li>
+      <li><code>files:write</code> &mdash; upload files to Slack</li>
+      <li><code>reactions:write</code> &mdash; add status reactions (hourglass during processing)</li>
+      <li><code>users:read</code> &mdash; resolve user info</li>
+    </ul>
+  </li>
+  <li>Under <strong>Event Subscriptions</strong>, enable events and subscribe to:
+    <ul>
+      <li><code>message.channels</code> &mdash; messages in public channels</li>
+      <li><code>message.groups</code> &mdash; messages in private channels</li>
+      <li><code>message.im</code> &mdash; direct messages</li>
+    </ul>
+  </li>
+  <li>Install the app to your workspace &mdash; copy the <strong>Bot User OAuth Token</strong> (<code>xoxb-...</code>)</li>
+</ol>
+
+<h2>Configuration</h2>
+${codeBlock(`[slack]
+enabled = true
+app_token = "xapp-1-..."
+bot_token = "xoxb-..."
+allowed_user_ids = ["U123456789"]
+use_threads = true`, 'toml', 'config.toml')}
+
+${configTable([
+  ['enabled', 'bool', 'false', 'Enable the Slack channel'],
+  ['app_token', 'string', '&mdash;', 'App-Level Token for Socket Mode (<code>xapp-...</code>). Supports <code>"keychain"</code> and <code>$&#123;ENV&#125;</code>.'],
+  ['bot_token', 'string', '&mdash;', 'Bot User OAuth Token (<code>xoxb-...</code>). Supports <code>"keychain"</code> and <code>$&#123;ENV&#125;</code>.'],
+  ['allowed_user_ids', 'array', '[]', 'Slack user IDs allowed to interact. Empty = no restriction.'],
+  ['use_threads', 'bool', 'true', 'Reply in threads by default. Each thread gets its own session context.'],
+])}
+
+<h2>Find Your Slack User ID</h2>
+<p>Click on your profile in Slack, then click <strong>More</strong> &rarr; <strong>Copy member ID</strong>. The format is <code>U</code> followed by alphanumeric characters (e.g., <code>U0123ABCDEF</code>).</p>
+
+<h2>Features</h2>
+<ul>
+  <li><strong>Socket Mode</strong> &mdash; real-time WebSocket connection, no public URL required</li>
+  <li><strong>Threaded replies</strong> &mdash; configurable threaded conversations with per-thread session context</li>
+  <li><strong>File transfer</strong> &mdash; send and receive files through Slack</li>
+  <li><strong>Block Kit approvals</strong> &mdash; interactive buttons for terminal command approval</li>
+  <li><strong>Slash commands</strong> &mdash; same commands as Telegram (<code>/cost</code>, <code>/model</code>, <code>/tasks</code>, etc.)</li>
+  <li><strong>Status reactions</strong> &mdash; hourglass emoji while processing, removed on completion</li>
+  <li><strong>Markdown conversion</strong> &mdash; standard markdown automatically converted to Slack mrkdwn format</li>
+  <li><strong>Message chunking</strong> &mdash; long responses split to respect Slack&rsquo;s 39KB message limit</li>
+  <li><strong>Auto-reconnect</strong> &mdash; exponential backoff on connection failure (5s &rarr; 60s max)</li>
+</ul>
+
+<h2>Session Model</h2>
+<p>Slack sessions are identified by channel and thread:</p>
+<ul>
+  <li><strong>Channel message:</strong> <code>slack:{channel_id}</code></li>
+  <li><strong>Thread message:</strong> <code>slack:{channel_id}:{thread_ts}</code> (when <code>use_threads</code> is enabled)</li>
+</ul>
+<p>Each session maintains its own conversation history, working memory, and facts context.</p>
+
+${callout('warn', 'Access Control', 'If <code>allowed_user_ids</code> is empty, <strong>anyone</strong> in the workspace who can message the bot can interact with it. Always set this in production.')}
+`
+  },
+  {
+    slug: '/slack/commands',
+    section: 'Slack',
+    title: 'Commands',
+    content: () => `
+<h1>Slack Commands</h1>
+<p class="lead">Slash commands available in Slack. The same set of commands as Telegram.</p>
+
+<table class="config-table">
+<thead><tr><th>Command</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>/model</code></td><td>Show the current active model</td></tr>
+<tr><td><code>/model &lt;name&gt;</code></td><td>Switch to a specific model (disables auto-routing)</td></tr>
+<tr><td><code>/models</code></td><td>List all available models from the provider (active model marked)</td></tr>
+<tr><td><code>/auto</code></td><td>Re-enable automatic model routing based on query complexity</td></tr>
+<tr><td><code>/reload</code></td><td>Reload config.toml (with auto-restore from backup if broken)</td></tr>
+<tr><td><code>/restart</code></td><td>Full restart &mdash; exec new process (picks up new binary, config, MCP servers)</td></tr>
+<tr><td><code>/cost</code></td><td>Show token usage statistics (last 24h, 7d, top models)</td></tr>
+<tr><td><code>/tasks</code></td><td>List running and recent agent tasks for your session</td></tr>
+<tr><td><code>/cancel &lt;id&gt;</code></td><td>Cancel a running task by ID</td></tr>
+<tr><td><code>/help</code></td><td>Show list of available commands</td></tr>
+</tbody>
+</table>
+
+${callout('info', 'Slash vs. Plain Text', 'In Slack, these commands are sent as regular messages starting with <code>/</code> in a DM or channel with the bot. They are not registered as Slack slash commands in the app manifest.')}
+`
+  },
+  {
+    slug: '/slack/approval',
+    section: 'Slack',
+    title: 'Approval Flow',
+    content: () => `
+<h1>Slack Approval Flow</h1>
+<p class="lead">Interactive Block Kit buttons for approving restricted terminal commands in Slack.</p>
+
+<h2>How It Works</h2>
+<ol>
+  <li>The agent requests a terminal command that isn&rsquo;t in the allowed prefixes list (or contains shell operators)</li>
+  <li>An approval message is sent to the Slack channel/thread with Block Kit buttons</li>
+  <li>The user sees three interactive buttons:</li>
+</ol>
+
+<div style="margin: 1.5rem 0; padding: 1rem; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 6px;">
+  <p style="margin-bottom: 0.75rem; color: var(--text-secondary); font-size: 0.85rem;">Command requires approval:</p>
+  <code style="display: block; margin-bottom: 1rem;">rm -rf /tmp/old-cache</code>
+  <div style="display: flex; gap: 0.5rem;">
+    <span style="padding: 0.4rem 0.8rem; background: var(--bg-elevated); border: 1px solid var(--green); border-radius: 4px; font-size: 0.75rem; color: var(--green);">Allow Once</span>
+    <span style="padding: 0.4rem 0.8rem; background: var(--bg-elevated); border: 1px solid var(--cyan); border-radius: 4px; font-size: 0.75rem; color: var(--cyan);">Allow Always</span>
+    <span style="padding: 0.4rem 0.8rem; background: var(--bg-elevated); border: 1px solid var(--red); border-radius: 4px; font-size: 0.75rem; color: var(--red);">Deny</span>
+  </div>
+</div>
+
+<h2>Approval Options</h2>
+<table class="config-table">
+<thead><tr><th>Option</th><th>Behavior</th></tr></thead>
+<tbody>
+<tr><td><strong>Allow Once</strong></td><td>Execute the command this time only</td></tr>
+<tr><td><strong>Allow Always</strong></td><td>Execute and persist the command prefix for future auto-approval</td></tr>
+<tr><td><strong>Deny</strong></td><td>Reject the command &mdash; agent receives denial message</td></tr>
+</tbody>
+</table>
+
+<p>The approval flow in Slack works identically to Telegram. &ldquo;Allow Always&rdquo; persists the prefix to SQLite so it survives daemon restarts.</p>
+
+${callout('warn', 'Shell Operators', 'Commands containing <code>;</code> <code>|</code> <code>&amp;&amp;</code> <code>||</code> <code>$()</code> or backticks <strong>always</strong> require approval, even if the prefix is whitelisted.')}
+`
+  },
+  {
     slug: '/tools',
     section: 'Tools',
     title: 'Tools Overview',
@@ -644,7 +818,7 @@ ${codeBlock(`trait Tool {
 <tr><td><a href="/tools/web-search"><code>web_search</code></a></td><td>Search the web (DuckDuckGo or Brave)</td><td>[search]</td></tr>
 <tr><td><a href="/tools/web-fetch"><code>web_fetch</code></a></td><td>Fetch and extract readable content from URLs</td><td>Always enabled</td></tr>
 <tr><td><a href="/tools/browser"><code>browser</code></a></td><td>Headless Chrome automation</td><td>[browser] enabled=true</td></tr>
-<tr><td><a href="/tools/send-file"><code>send_file</code></a></td><td>Send files to the user via Telegram</td><td>[files]</td></tr>
+<tr><td><a href="/tools/send-file"><code>send_file</code></a></td><td>Send files to the user via Telegram or Slack</td><td>[files]</td></tr>
 <tr><td><a href="/tools/sub-agents"><code>spawn_agent</code></a></td><td>Spawn recursive sub-agents</td><td>[subagents]</td></tr>
 <tr><td><a href="/tools/cli-agents"><code>cli_agent</code></a></td><td>Delegate to external CLI tools</td><td>[cli_agents]</td></tr>
 <tr><td><a href="/scheduler"><code>scheduler</code></a></td><td>Create, manage, and run scheduled tasks</td><td>[scheduler]</td></tr>
@@ -1060,7 +1234,7 @@ ${callout('info', 'Complements Browser Tool', 'Use <code>web_fetch</code> for qu
     title: 'File Transfer',
     content: () => `
 <h1>File Transfer</h1>
-<p class="lead">Send files to the user via Telegram, and receive files from the user. Validates paths and blocks sensitive files.</p>
+<p class="lead">Send files to the user via Telegram or Slack, and receive files from the user. Validates paths and blocks sensitive files.</p>
 
 <h2>Tool Name</h2>
 <p><code>send_file</code> (outbound)</p>
@@ -1088,7 +1262,7 @@ retention_hours = 24`, 'toml', 'config.toml')}
 </ul>
 
 <h2>Inbound Files</h2>
-<p>Users can send files to the bot in Telegram. aidaemon downloads them to <code>inbox_dir</code> and makes them available to the agent. Supports documents, photos, audio, video, and voice messages, up to <code>max_file_size_mb</code>.</p>
+<p>Users can send files to the bot in Telegram or Slack. aidaemon downloads them to <code>inbox_dir</code> and makes them available to the agent. Supports documents, photos, audio, video, and voice messages, up to <code>max_file_size_mb</code>.</p>
 
 ${callout('warn', 'Outbox Directories', 'The <code>outbox_dirs</code> list controls which directories the agent can send files from. Keep it as narrow as possible in production.')}
 `
