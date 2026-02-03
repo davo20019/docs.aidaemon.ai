@@ -47,8 +47,12 @@ const pages = [
   <li><strong>Skills system</strong> — dynamic prompt enhancement via markdown files</li>
   <li><strong>Self-maintenance</strong> — reads, updates, validates, and restores its own config</li>
   <li><strong>Browser automation</strong> — headless Chrome with screenshot support</li>
+  <li><strong>Web research</strong> — built-in web search (DuckDuckGo/Brave) and URL fetching</li>
   <li><strong>Sub-agent spawning</strong> — recursive agent delegation for complex tasks</li>
   <li><strong>CLI agent delegation</strong> — delegate to Claude, Gemini, Codex, Aider, etc.</li>
+  <li><strong>Scheduled tasks</strong> — cron-style recurring tasks with natural language parsing</li>
+  <li><strong>File transfer</strong> — send and receive files via Telegram with path security</li>
+  <li><strong>Secrets management</strong> — OS keychain and environment variable support</li>
 </ul>
 
 <h2>Architecture at a Glance</h2>
@@ -59,9 +63,12 @@ ${codeBlock(`Telegram ───> Agent ───> LLM Provider
               │    ├── system info
               │    ├── memory (facts)
               │    ├── config manager
+              │    ├── web search + fetch
               │    ├── browser (optional)
+              │    ├── file transfer
               │    ├── sub-agents
               │    ├── CLI agents
+              │    ├── scheduler
               │    └── MCP tools (dynamic)
               │
               ├──> State
@@ -151,9 +158,9 @@ ${codeBlock(`./target/release/aidaemon --help`, 'bash')}
 <table class="config-table">
 <thead><tr><th>Provider</th><th>Base URL</th><th>Default Models</th></tr></thead>
 <tbody>
-<tr><td><strong>Google AI Studio (Native)</strong></td><td>Native API</td><td>gemini-3-flash-preview / gemini-2.5-flash-lite / gemini-3-pro-preview</td></tr>
-<tr><td>OpenAI</td><td><code>https://api.openai.com/v1</code></td><td>openai/gpt-4o</td></tr>
-<tr><td>Anthropic (Native)</td><td>Native API</td><td>claude-sonnet-4-20250514</td></tr>
+<tr><td><strong>Google AI Studio (Native)</strong></td><td>Native API</td><td>gemini-2.5-flash / gemini-2.5-flash-lite / gemini-2.5-pro</td></tr>
+<tr><td>OpenAI</td><td><code>https://api.openai.com/v1</code></td><td>gpt-4o / gpt-4o-mini / gpt-4o</td></tr>
+<tr><td>Anthropic (Native)</td><td>Native API</td><td>claude-sonnet-4 / claude-haiku-4 / claude-opus-4</td></tr>
 <tr><td>Anthropic (OpenRouter)</td><td><code>https://openrouter.ai/api/v1</code></td><td>anthropic/claude-* variants</td></tr>
 <tr><td>OpenRouter</td><td><code>https://openrouter.ai/api/v1</code></td><td>Mixed providers</td></tr>
 <tr><td>Ollama (local)</td><td><code>http://localhost:11434/v1</code></td><td>Auto-discovered from local instance</td></tr>
@@ -296,15 +303,69 @@ ${configTable([
   ['max_output_chars', 'integer', 'null', 'Override global max output for this tool'],
 ])}
 
+<h2>[search]</h2>
+${configTable([
+  ['backend', 'string', '"duckduckgo"', 'Search backend: <code>duckduckgo</code> (no key needed) or <code>brave</code>'],
+  ['api_key', 'string', '""', 'API key for Brave search (supports <code>"keychain"</code>)'],
+])}
+
+<h2>[scheduler]</h2>
+${configTable([
+  ['enabled', 'bool', 'true', 'Enable the scheduled tasks system'],
+  ['tick_interval_secs', 'integer', '30', 'How often the scheduler checks for due tasks'],
+])}
+
+<h2>[[scheduler.tasks]]</h2>
+<p>Pre-defined scheduled tasks loaded from config on startup:</p>
+${configTable([
+  ['name', 'string', '—', 'Human-readable task label'],
+  ['schedule', 'string', '—', 'Natural language or cron expression (see <a href="/scheduler">Scheduler</a>)'],
+  ['prompt', 'string', '—', 'What the agent should do when the task fires'],
+  ['oneshot', 'bool', 'false', 'Fire once then auto-delete'],
+  ['trusted', 'bool', 'false', 'Run with full autonomy (no terminal approval needed)'],
+])}
+
+<h2>[files]</h2>
+${configTable([
+  ['enabled', 'bool', 'true', 'Enable file transfer tools (send/receive)'],
+  ['inbox_dir', 'string', '"~/.aidaemon/files/inbox"', 'Directory for received files from Telegram'],
+  ['outbox_dirs', 'array', '["~"]', 'Directories the agent is allowed to send files from'],
+  ['max_file_size_mb', 'integer', '10', 'Maximum file size for transfers in MB'],
+  ['retention_hours', 'integer', '24', 'Hours to retain received files before cleanup'],
+])}
+
+<h2>Secrets Management</h2>
+<p>Sensitive config values support two resolution methods beyond plain text:</p>
+
+<h3>OS Keychain</h3>
+<p>Set any secret field to <code>"keychain"</code> to resolve it from the OS keychain (macOS Keychain, Linux secret-service):</p>
+${codeBlock(`[provider]
+api_key = "keychain"    # Resolved from keychain entry "api_key"
+
+[telegram]
+bot_token = "keychain"  # Resolved from keychain entry "bot_token"`, 'toml')}
+
+<p>Store values with <code>aidaemon store-secret &lt;field&gt;</code> before first run.</p>
+
+<h3>Environment Variables</h3>
+<p>Use <code>\${VAR_NAME}</code> syntax anywhere in config values:</p>
+${codeBlock(`[provider]
+api_key = "\${GOOGLE_API_KEY}"
+
+[telegram]
+bot_token = "\${TELEGRAM_BOT_TOKEN}"`, 'toml')}
+
+${callout('info', 'Supported Keychain Fields', 'Fields supporting <code>"keychain"</code>: <code>provider.api_key</code>, <code>telegram.bot_token</code>, <code>triggers.email.password</code>, <code>state.encryption_key</code>, <code>search.api_key</code>.')}
+
 <h2>Example Config</h2>
 ${codeBlock(`[provider]
 kind = "google_genai"
 api_key = "AIza..."
 
 [provider.models]
-primary = "gemini-3-flash-preview"
+primary = "gemini-2.5-flash"
 fast = "gemini-2.5-flash-lite"
-smart = "gemini-3-pro-preview"
+smart = "gemini-2.5-pro"
 
 [telegram]
 bot_token = "123456:ABC-DEF..."
@@ -331,7 +392,24 @@ headless = true
 
 [skills]
 dir = "skills"
-enabled = true`, 'toml', 'config.toml')}
+enabled = true
+
+[search]
+backend = "duckduckgo"
+
+[scheduler]
+enabled = true
+
+[[scheduler.tasks]]
+name = "Morning check-in"
+schedule = "weekdays at 9am"
+prompt = "Check system health and summarize any overnight alerts"
+trusted = true
+
+[files]
+enabled = true
+inbox_dir = "~/.aidaemon/files/inbox"
+outbox_dirs = ["~"]`, 'toml', 'config.toml')}
 `
   },
   {
@@ -351,11 +429,14 @@ kind = "google_genai"
 api_key = "AIza..."
 
 [provider.models]
-primary = "gemini-3-flash-preview"
+primary = "gemini-2.5-flash"
 fast = "gemini-2.5-flash-lite"
-smart = "gemini-3-pro-preview"`, 'toml')}
+smart = "gemini-2.5-pro"`, 'toml')}
 
-${callout('info', 'Recommended Setup', 'Google AI Studio provides a free API key with generous rate limits. Gemini models have native tool-calling support and work well with aidaemon&rsquo;s agentic loop.')}
+${callout('info', 'Recommended Setup', 'Google AI Studio provides a free API key with generous rate limits. Gemini models have native tool-calling support, web grounding, and work well with aidaemon&rsquo;s agentic loop.')}
+
+<h3>Gemini Web Grounding</h3>
+<p>When using <code>google_genai</code>, aidaemon automatically enables Google Search grounding. This allows Gemini models to search the web as part of their responses. Models that don&rsquo;t support grounding with function calling are detected automatically and fall back gracefully.</p>
 
 <h3>openai_compatible</h3>
 <p>Works with any API that implements the OpenAI chat completions format. This includes OpenAI, OpenRouter, Ollama, and many others.</p>
@@ -388,9 +469,9 @@ api_key = "sk-or-..."
 base_url = "https://openrouter.ai/api/v1"
 
 [provider.models]
-primary = "anthropic/claude-sonnet-4-20250514"
-fast = "anthropic/claude-haiku-4-20250414"
-smart = "anthropic/claude-opus-4-20250414"`, 'toml')}
+primary = "anthropic/claude-sonnet-4"
+fast = "anthropic/claude-haiku-4"
+smart = "anthropic/claude-opus-4"`, 'toml')}
 
 <h2>Ollama (Local)</h2>
 <p>Run models locally with Ollama. No API key required.</p>
@@ -438,6 +519,8 @@ ${callout('warn', 'Access Control', 'If <code>allowed_user_ids</code> is empty, 
   <li><strong>Markdown rendering</strong> — agent responses are converted to Telegram HTML</li>
   <li><strong>Long message splitting</strong> — responses over 4096 chars are split at paragraph/line boundaries</li>
   <li><strong>Screenshot sharing</strong> — browser screenshots sent as photos with captions</li>
+  <li><strong>File transfer</strong> — send and receive documents, photos, audio, video via Telegram</li>
+  <li><strong>Live task status</strong> — <code>/tasks</code> shows running agent tasks with elapsed time</li>
 </ul>
 
 <h2>Retry Behavior</h2>
@@ -466,6 +549,8 @@ ${callout('warn', 'Access Control', 'If <code>allowed_user_ids</code> is empty, 
 <tr><td><code>/auto</code></td><td>Re-enable automatic model routing based on query complexity</td></tr>
 <tr><td><code>/reload</code></td><td>Reload config.toml (with auto-restore from backup if broken)</td></tr>
 <tr><td><code>/restart</code></td><td>Full restart — exec new process (picks up new binary, config, MCP servers)</td></tr>
+<tr><td><code>/tasks</code></td><td>List running and recent agent tasks for your session</td></tr>
+<tr><td><code>/cancel &lt;id&gt;</code></td><td>Cancel a running task by ID</td></tr>
 <tr><td><code>/help</code></td><td>Show list of available commands</td></tr>
 <tr><td><code>/start</code></td><td>Same as /help</td></tr>
 </tbody>
@@ -553,12 +638,18 @@ ${codeBlock(`trait Tool {
 <tr><td><a href="/tools/system-info"><code>system_info</code></a></td><td>Query hostname, OS, uptime, memory</td><td>Always enabled</td></tr>
 <tr><td><a href="/tools/memory"><code>remember_fact</code></a></td><td>Store long-term facts in SQLite</td><td>Always enabled</td></tr>
 <tr><td><a href="/tools/config-manager"><code>manage_config</code></a></td><td>Read/update/restore config.toml</td><td>Always enabled</td></tr>
+<tr><td><a href="/tools/web-search"><code>web_search</code></a></td><td>Search the web (DuckDuckGo or Brave)</td><td>[search]</td></tr>
+<tr><td><a href="/tools/web-fetch"><code>web_fetch</code></a></td><td>Fetch and extract readable content from URLs</td><td>Always enabled</td></tr>
 <tr><td><a href="/tools/browser"><code>browser</code></a></td><td>Headless Chrome automation</td><td>[browser] enabled=true</td></tr>
+<tr><td><a href="/tools/send-file"><code>send_file</code></a></td><td>Send files to the user via Telegram</td><td>[files]</td></tr>
 <tr><td><a href="/tools/sub-agents"><code>spawn_agent</code></a></td><td>Spawn recursive sub-agents</td><td>[subagents]</td></tr>
 <tr><td><a href="/tools/cli-agents"><code>cli_agent</code></a></td><td>Delegate to external CLI tools</td><td>[cli_agents]</td></tr>
+<tr><td><a href="/scheduler"><code>scheduler</code></a></td><td>Create, manage, and run scheduled tasks</td><td>[scheduler]</td></tr>
 <tr><td><a href="/mcp">MCP tools</a></td><td>Dynamically discovered via MCP servers</td><td>[mcp.*]</td></tr>
 </tbody>
 </table>
+
+${callout('info', 'Dynamic Budget', 'The agent also has a built-in <code>request_more_iterations</code> pseudo-tool that extends the agentic loop budget by 10 iterations (up to a hard cap) when the current budget is insufficient to complete a task.')}
 
 <h2>Tool Registration Order</h2>
 <p>Tools are registered during initialization in this order:</p>
@@ -567,10 +658,13 @@ ${codeBlock(`trait Tool {
   <li>TerminalTool (with approval channel)</li>
   <li>RememberFactTool</li>
   <li>ConfigManagerTool</li>
+  <li>WebFetchTool</li>
+  <li>WebSearchTool</li>
   <li>BrowserTool (if enabled)</li>
+  <li>SendFileTool (if files.enabled)</li>
   <li>CliAgentTool (if enabled)</li>
+  <li>SchedulerTool (if scheduler.enabled)</li>
   <li>MCP tools (if configured)</li>
-  <li>SpawnAgentTool (if enabled)</li>
 </ol>
 `
   },
@@ -610,8 +704,15 @@ allowed_prefixes = ["ls", "cat", "head", "tail", "echo", "date"]
 initial_timeout_secs = 30
 max_output_chars = 4000`, 'toml', 'config.toml')}
 
-<h2>Allow Always</h2>
-<p>When the user clicks "Allow Always" in Telegram, the command prefix is added to <code>terminal.allowed_prefixes</code> in config.toml. Future commands with the same prefix are auto-approved.</p>
+<h2>Allow Always (Persistent)</h2>
+<p>When the user clicks "Allow Always" in Telegram:</p>
+<ol>
+  <li>The first word of the command is extracted as the prefix</li>
+  <li>The prefix is added to the in-memory allowed list</li>
+  <li>The prefix is persisted to SQLite (<code>terminal_allowed_prefixes</code> table)</li>
+  <li>On restart, persisted prefixes are merged with config prefixes</li>
+</ol>
+<p>This means "Allow Always" approvals survive daemon restarts without modifying config.toml.</p>
 
 ${callout('danger', 'Untrusted Sessions', 'Sessions from triggers (email, etc.) are flagged as untrusted. <strong>All</strong> commands in untrusted sessions require approval regardless of the whitelist.')}
 `
@@ -712,7 +813,7 @@ password = "***REDACTED***"`, 'toml')}
 <p>Read a specific TOML key path:</p>
 ${codeBlock(`action: "get"
 key: "provider.models.primary"
-# Returns: "gemini-3-flash-preview"`, 'text')}
+# Returns: "gemini-2.5-flash"`, 'text')}
 
 <h3>set</h3>
 <p>Update a specific key with a new value (TOML literal format):</p>
@@ -880,6 +981,113 @@ timeout_secs = 120`, 'toml', 'config.toml')}
   <li><strong>JSONL:</strong> takes the last line containing content</li>
   <li><strong>Fallback:</strong> returns raw output, truncated to <code>max_output_chars</code></li>
 </ul>
+`
+  },
+  {
+    slug: '/tools/web-search',
+    section: 'Tools',
+    title: 'Web Search Tool',
+    content: () => `
+<h1>Web Search Tool</h1>
+<p class="lead">Search the web and return titles, URLs, and snippets. Supports DuckDuckGo (default, no key needed) and Brave backends.</p>
+
+<h2>Tool Name</h2>
+<p><code>web_search</code></p>
+
+<h2>Parameters</h2>
+${configTable([
+  ['query', 'string', '—', 'The search query (required)'],
+  ['max_results', 'integer', '5', 'Maximum number of results to return'],
+])}
+
+<h2>Backends</h2>
+<table class="config-table">
+<thead><tr><th>Backend</th><th>API Key</th><th>How It Works</th></tr></thead>
+<tbody>
+<tr><td><strong>DuckDuckGo</strong> (default)</td><td>Not required</td><td>Fetches <code>https://lite.duckduckgo.com/lite/</code> and parses HTML results</td></tr>
+<tr><td><strong>Brave</strong></td><td>Required</td><td>Calls <code>https://api.search.brave.com/res/v1/web/search</code> JSON API</td></tr>
+</tbody>
+</table>
+
+<h2>Configuration</h2>
+${codeBlock(`[search]
+backend = "duckduckgo"  # or "brave"
+api_key = ""            # Required only for Brave`, 'toml', 'config.toml')}
+
+<h2>Output Format</h2>
+<p>Returns numbered markdown results:</p>
+${codeBlock(`1. [Page Title](https://example.com/page)
+   A brief snippet describing the page content...
+
+2. [Another Result](https://example.com/other)
+   Another snippet...`, 'text')}
+`
+  },
+  {
+    slug: '/tools/web-fetch',
+    section: 'Tools',
+    title: 'Web Fetch Tool',
+    content: () => `
+<h1>Web Fetch Tool</h1>
+<p class="lead">Fetch a URL and extract its readable content. Always enabled, no configuration required.</p>
+
+<h2>Tool Name</h2>
+<p><code>web_fetch</code></p>
+
+<h2>Parameters</h2>
+${configTable([
+  ['url', 'string', '—', 'The URL to fetch (required)'],
+  ['max_chars', 'integer', '20000', 'Maximum characters to return'],
+])}
+
+<h2>Behavior</h2>
+<ol>
+  <li>Fetches URL with browser-like headers (Firefox user-agent, standard Accept headers)</li>
+  <li>Attempts readability extraction to get clean article text</li>
+  <li>Falls back to full HTML-to-markdown conversion</li>
+  <li>Truncates to <code>max_chars</code> at a safe UTF-8 boundary</li>
+</ol>
+
+${callout('info', 'Complements Browser Tool', 'Use <code>web_fetch</code> for quick content extraction without spinning up Chrome. Use the <a href="/tools/browser">Browser Tool</a> for interactive pages requiring JavaScript, form filling, or screenshots.')}
+`
+  },
+  {
+    slug: '/tools/send-file',
+    section: 'Tools',
+    title: 'File Transfer',
+    content: () => `
+<h1>File Transfer</h1>
+<p class="lead">Send files to the user via Telegram, and receive files from the user. Validates paths and blocks sensitive files.</p>
+
+<h2>Tool Name</h2>
+<p><code>send_file</code> (outbound)</p>
+
+<h2>Parameters</h2>
+${configTable([
+  ['file_path', 'string', '—', 'Absolute path to the file to send (required)'],
+  ['caption', 'string', 'null', 'Optional caption for the file'],
+])}
+
+<h2>Configuration</h2>
+${codeBlock(`[files]
+enabled = true
+inbox_dir = "~/.aidaemon/files/inbox"
+outbox_dirs = ["~"]
+max_file_size_mb = 10
+retention_hours = 24`, 'toml', 'config.toml')}
+
+<h2>Security</h2>
+<p>The tool enforces path restrictions to prevent accidental leaking of secrets:</p>
+<ul>
+  <li><strong>Allowed paths:</strong> Only files within <code>outbox_dirs</code> or <code>inbox_dir</code></li>
+  <li><strong>Symlink resolution:</strong> Canonicalizes paths to prevent directory traversal</li>
+  <li><strong>Blocked patterns:</strong> <code>.ssh</code>, <code>.gnupg</code>, <code>.env</code>, <code>credentials</code>, <code>.key</code>, <code>.pem</code>, <code>.aws/credentials</code>, <code>.netrc</code>, <code>.docker/config.json</code>, <code>config.toml</code></li>
+</ul>
+
+<h2>Inbound Files</h2>
+<p>Users can send files to the bot in Telegram. aidaemon downloads them to <code>inbox_dir</code> and makes them available to the agent. Supports documents, photos, audio, video, and voice messages, up to <code>max_file_size_mb</code>.</p>
+
+${callout('warn', 'Outbox Directories', 'The <code>outbox_dirs</code> list controls which directories the agent can send files from. Keep it as narrow as possible in production.')}
 `
   },
   {
@@ -1070,8 +1278,13 @@ ${configTable([
   ['triggers', 'string', '—', 'Comma-separated keywords that activate the skill'],
 ])}
 
-<h2>Matching</h2>
-<p>Trigger matching is whole-word, case-insensitive. If any trigger keyword appears as a complete word in the user&rsquo;s message, the skill activates. A fast LLM confirmation step can optionally validate relevance (fail-open if the check fails).</p>
+<h2>Hybrid Matching</h2>
+<p>Skill activation uses a two-stage process:</p>
+<ol>
+  <li><strong>Pattern matching</strong> — whole-word, case-insensitive keyword search. If any trigger appears as a complete word in the user&rsquo;s message, the skill is a candidate.</li>
+  <li><strong>LLM confirmation</strong> — the fast model validates whether each candidate skill is actually relevant to the user&rsquo;s intent. This prevents false activations from coincidental keyword matches.</li>
+</ol>
+<p>The confirmation step is <strong>fail-open</strong>: if the LLM call fails or times out, all pattern-matched candidates are activated.</p>
 
 <h2>System Prompt Injection</h2>
 <p>When skills are loaded, the system prompt is enhanced with:</p>
@@ -1095,6 +1308,86 @@ When reviewing code, follow these guidelines:
 `
   },
   {
+    slug: '/scheduler',
+    section: 'Scheduler',
+    title: 'Scheduled Tasks',
+    content: () => `
+<h1>Scheduled Tasks</h1>
+<p class="lead">Create recurring and one-shot tasks with natural language or cron expressions. The agent executes the task prompt on schedule.</p>
+
+<h2>Tool Name</h2>
+<p><code>scheduler</code></p>
+
+<h2>Actions</h2>
+<table class="config-table">
+<thead><tr><th>Action</th><th>Required Params</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>create</code></td><td>name, schedule, prompt</td><td>Create a new scheduled task</td></tr>
+<tr><td><code>list</code></td><td>—</td><td>List all tasks with status and next run time</td></tr>
+<tr><td><code>delete</code></td><td>id</td><td>Delete a task by UUID</td></tr>
+<tr><td><code>pause</code></td><td>id</td><td>Pause a task (stops firing)</td></tr>
+<tr><td><code>resume</code></td><td>id</td><td>Resume a paused task (recomputes next run)</td></tr>
+</tbody>
+</table>
+
+<h2>Create Parameters</h2>
+${configTable([
+  ['name', 'string', '—', 'Human-readable label for the task'],
+  ['schedule', 'string', '—', 'Natural language or 5-field cron expression'],
+  ['prompt', 'string', '—', 'What the agent should do when the task fires'],
+  ['oneshot', 'bool', 'false', 'Fire once then auto-delete'],
+  ['trusted', 'bool', 'false', 'Run with full autonomy (no terminal approval needed)'],
+])}
+
+<h2>Natural Language Schedules</h2>
+<p>The scheduler parses common patterns into cron expressions:</p>
+
+<table class="config-table">
+<thead><tr><th>Input</th><th>Cron</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>hourly</code></td><td><code>0 * * * *</code></td><td>Every hour at :00</td></tr>
+<tr><td><code>daily</code></td><td><code>0 0 * * *</code></td><td>Every day at midnight</td></tr>
+<tr><td><code>weekly</code></td><td><code>0 0 * * 0</code></td><td>Every Sunday at midnight</td></tr>
+<tr><td><code>monthly</code></td><td><code>0 0 1 * *</code></td><td>First of the month</td></tr>
+<tr><td><code>every 5m</code></td><td><code>*/5 * * * *</code></td><td>Every 5 minutes</td></tr>
+<tr><td><code>every 2h</code></td><td><code>0 */2 * * *</code></td><td>Every 2 hours</td></tr>
+<tr><td><code>daily at 9am</code></td><td><code>0 9 * * *</code></td><td>Every day at 9:00 AM</td></tr>
+<tr><td><code>daily at 14:30</code></td><td><code>30 14 * * *</code></td><td>Every day at 2:30 PM</td></tr>
+<tr><td><code>weekdays at 8:30</code></td><td><code>30 8 * * 1-5</code></td><td>Mon-Fri at 8:30 AM</td></tr>
+<tr><td><code>weekends at 10am</code></td><td><code>0 10 * * 0,6</code></td><td>Sat-Sun at 10:00 AM</td></tr>
+<tr><td><code>in 2h</code></td><td>(computed absolute)</td><td>One-shot, fires once in 2 hours</td></tr>
+<tr><td><code>in 30m</code></td><td>(computed absolute)</td><td>One-shot, fires once in 30 minutes</td></tr>
+</tbody>
+</table>
+
+<p>Standard 5-field cron expressions are also accepted directly (e.g., <code>0 9 * * 1-5</code>).</p>
+
+<h2>Configuration</h2>
+${codeBlock(`[scheduler]
+enabled = true
+tick_interval_secs = 30
+
+[[scheduler.tasks]]
+name = "Morning check-in"
+schedule = "weekdays at 9am"
+prompt = "Check system health and report any issues"
+trusted = true
+
+[[scheduler.tasks]]
+name = "Backup reminder"
+schedule = "weekly"
+prompt = "Remind me to run backups"`, 'toml', 'config.toml')}
+
+<h2>Task Storage</h2>
+<p>Tasks are persisted in SQLite (<code>scheduled_tasks</code> table). Config-defined tasks are synced on startup — removed tasks are cleaned up automatically. Tasks created via the tool persist indefinitely.</p>
+
+<h2>Missed Tasks</h2>
+<p>On startup, the scheduler checks for tasks that should have fired while the daemon was down. Missed tasks are fired immediately during recovery.</p>
+
+${callout('warn', 'Trusted vs Untrusted', 'Trusted tasks run with full terminal access (no approval needed). Untrusted tasks (default) require approval for any terminal commands, just like email trigger sessions.')}
+`
+  },
+  {
     slug: '/router',
     section: 'Router',
     title: 'Model Routing',
@@ -1107,8 +1400,8 @@ When reviewing code, follow these guidelines:
 <thead><tr><th>Tier</th><th>Use Case</th><th>Typical Model</th></tr></thead>
 <tbody>
 <tr><td><strong>Fast</strong></td><td>Simple greetings, yes/no, short lookups</td><td>gemini-2.5-flash-lite, gpt-4o-mini, claude-haiku-4</td></tr>
-<tr><td><strong>Primary</strong></td><td>General conversation, moderate tasks</td><td>gemini-3-flash-preview, gpt-4o, claude-sonnet-4</td></tr>
-<tr><td><strong>Smart</strong></td><td>Complex reasoning, code generation, analysis</td><td>gemini-3-pro-preview, o1-preview, claude-opus-4</td></tr>
+<tr><td><strong>Primary</strong></td><td>General conversation, moderate tasks</td><td>gemini-2.5-flash, gpt-4o, claude-sonnet-4</td></tr>
+<tr><td><strong>Smart</strong></td><td>Complex reasoning, code generation, analysis</td><td>gemini-2.5-pro, o1-preview, claude-opus-4</td></tr>
 </tbody>
 </table>
 
@@ -1168,6 +1461,15 @@ When reviewing code, follow these guidelines:
   </li>
   <li><strong>Max iterations reached</strong> → return timeout message</li>
 </ol>
+
+<h2>Dynamic Iteration Budget</h2>
+<p>The agent has a built-in <code>request_more_iterations</code> tool that extends the loop budget when the current limit is insufficient:</p>
+<ul>
+  <li>Extends budget by <strong>10 iterations</strong> per call</li>
+  <li>Hard cap prevents unlimited extension (typically 25 total)</li>
+  <li>Requires a <code>reason</code> parameter explaining what remains to be done</li>
+  <li>Used when the agent has a clear plan but would otherwise run out of iterations mid-task</li>
+</ul>
 
 <h2>Error Recovery Strategy</h2>
 <p>The <code>call_llm_with_recovery</code> method classifies errors and responds accordingly:</p>
@@ -1260,6 +1562,28 @@ ${configTable([
   ['used_count', 'INTEGER', '0', 'Number of times the macro has been used'],
   ['created_at', 'TEXT', '&mdash;', 'RFC3339 timestamp'],
   ['updated_at', 'TEXT', '&mdash;', 'RFC3339 timestamp'],
+])}
+
+<h3>scheduled_tasks table</h3>
+${configTable([
+  ['id', 'TEXT PK', '—', 'UUID primary key'],
+  ['name', 'TEXT', '—', 'Human-readable task label'],
+  ['cron_expr', 'TEXT', '—', 'Computed 5-field cron expression'],
+  ['original_schedule', 'TEXT', '—', 'User input (natural language or cron)'],
+  ['prompt', 'TEXT', '—', 'Agent prompt to execute on schedule'],
+  ['source', 'TEXT', '—', '"tool" (created via tool) or "config" (from config.toml)'],
+  ['is_oneshot', 'INTEGER', '0', 'Fire once then auto-delete'],
+  ['is_paused', 'INTEGER', '0', 'Paused tasks do not fire'],
+  ['is_trusted', 'INTEGER', '0', 'Trusted tasks skip terminal approval'],
+  ['next_run_at', 'TEXT', '—', 'RFC3339 timestamp of next scheduled run'],
+  ['last_run_at', 'TEXT', 'null', 'RFC3339 timestamp of last execution'],
+  ['created_at', 'TEXT', '—', 'RFC3339 timestamp'],
+  ['updated_at', 'TEXT', '—', 'RFC3339 timestamp'],
+])}
+
+<h3>terminal_allowed_prefixes table</h3>
+${configTable([
+  ['prefix', 'TEXT PK', '—', 'Command prefix persisted from "Allow Always" approvals'],
 ])}
 
 <h2>Working Memory</h2>
