@@ -53,6 +53,7 @@ const pages = [
   <li><strong>Scheduled tasks</strong> — cron-style recurring tasks with natural language parsing</li>
   <li><strong>File transfer</strong> — send and receive files via Telegram with path security</li>
   <li><strong>Secrets management</strong> — OS keychain and environment variable support</li>
+  <li><strong>Token cost tracking</strong> — per-model usage stats, daily budgets, /cost command</li>
 </ul>
 
 <h2>Architecture at a Glance</h2>
@@ -211,7 +212,7 @@ ${configTable([
   ['smart', 'string', '(same as primary)', 'Model for complex reasoning tasks'],
 ])}
 
-${callout('info', 'Model Defaults', 'If <code>fast</code> and <code>smart</code> are not set, they default to the same value as <code>primary</code>. Provider fallback defaults: <strong>google_genai</strong> → gemini-3-flash-preview, <strong>openai_compatible</strong> → openai/gpt-4o, <strong>anthropic</strong> → claude-sonnet-4-20250514. The <a href="/getting-started/wizard">setup wizard</a> writes optimized per-tier model selections. When all three tiers resolve to the same model, auto-routing is disabled. See <a href="/router">Model Routing</a> for details.')}
+${callout('info', 'Model Defaults', 'Provider-aware defaults: <strong>google_genai</strong> → primary=gemini-3-flash-preview, fast=gemini-2.5-flash-lite, smart=gemini-3-pro-preview. <strong>openai_compatible</strong> → all tiers default to openai/gpt-4o. <strong>anthropic</strong> → all tiers default to claude-sonnet-4-20250514. When all three tiers resolve to the same model, auto-routing is disabled. See <a href="/router">Model Routing</a>.')}
 
 <h2>[telegram]</h2>
 ${configTable([
@@ -225,6 +226,7 @@ ${configTable([
   ['working_memory_cap', 'integer', '50', 'Max messages per session kept in memory'],
   ['consolidation_interval_hours', 'integer', '6', 'Hours between memory consolidation runs'],
   ['max_facts', 'integer', '100', 'Maximum number of facts injected into the system prompt'],
+  ['daily_token_budget', 'integer', 'null', 'Max total tokens (input+output) per day. Null = unlimited. Resets at midnight UTC.'],
   ['encryption_key', 'string', 'null', 'SQLCipher encryption key (requires <code>encryption</code> feature). AES-256 at rest.'],
 ])}
 
@@ -549,6 +551,7 @@ ${callout('warn', 'Access Control', 'If <code>allowed_user_ids</code> is empty, 
 <tr><td><code>/auto</code></td><td>Re-enable automatic model routing based on query complexity</td></tr>
 <tr><td><code>/reload</code></td><td>Reload config.toml (with auto-restore from backup if broken)</td></tr>
 <tr><td><code>/restart</code></td><td>Full restart — exec new process (picks up new binary, config, MCP servers)</td></tr>
+<tr><td><code>/cost</code></td><td>Show token usage statistics (last 24h, 7d, top models)</td></tr>
 <tr><td><code>/tasks</code></td><td>List running and recent agent tasks for your session</td></tr>
 <tr><td><code>/cancel &lt;id&gt;</code></td><td>Cancel a running task by ID</td></tr>
 <tr><td><code>/help</code></td><td>Show list of available commands</td></tr>
@@ -1433,6 +1436,66 @@ ${callout('warn', 'Trusted vs Untrusted', 'Trusted tasks run with full terminal 
   <li>If all three model tiers are the same, routing is automatically disabled</li>
   <li>Sending <code>/model &lt;name&gt;</code> in Telegram disables routing (manual override)</li>
   <li>Sending <code>/auto</code> re-enables automatic routing</li>
+</ul>
+`
+  },
+  {
+    slug: '/cost-tracking',
+    section: 'Cost Tracking',
+    title: 'Token Usage & Budgets',
+    content: () => `
+<h1>Token Usage &amp; Cost Tracking</h1>
+<p class="lead">Track token consumption per model and session. Set daily budgets to control spending. Check stats from Telegram with <code>/cost</code>.</p>
+
+<h2>How It Works</h2>
+<ol>
+  <li>Every LLM call records input and output tokens to the <code>token_usage</code> SQLite table</li>
+  <li>Each record includes: model name, session ID, token counts, and timestamp</li>
+  <li>Optionally, set a daily token budget that blocks LLM calls once exceeded</li>
+  <li>Budget resets automatically at midnight UTC</li>
+</ol>
+
+<h2>Configuration</h2>
+${configTable([
+  ['daily_token_budget', 'integer', 'null', 'Maximum total tokens (input + output) per day. Null = unlimited.'],
+])}
+
+${codeBlock(`[state]
+daily_token_budget = 1000000  # 1M tokens per day`, 'toml', 'config.toml')}
+
+${callout('info', 'Budget Scope', 'The daily budget is global — it counts all tokens across all sessions and models. When exceeded, LLM calls return an error until midnight UTC.')}
+
+<h2>Telegram /cost Command</h2>
+<p>Send <code>/cost</code> in Telegram to view usage statistics:</p>
+${codeBlock(`Token usage (last 24h):
+  Input:  12,450 tokens
+  Output: 8,230 tokens
+
+Token usage (last 7d):
+  Input:  87,320 tokens
+  Output: 52,180 tokens
+
+Top models (7d):
+  gemini-3-flash-preview: 98,400 tokens
+  gemini-3-pro-preview: 41,100 tokens`, 'text')}
+
+<h2>Database Schema</h2>
+${configTable([
+  ['id', 'INTEGER PK', 'auto', 'Auto-incrementing primary key'],
+  ['session_id', 'TEXT', '—', 'Which user/chat session made the call'],
+  ['model', 'TEXT', '—', 'Which LLM model was used'],
+  ['input_tokens', 'INTEGER', '—', 'Tokens sent to the model'],
+  ['output_tokens', 'INTEGER', '—', 'Tokens generated by the model'],
+  ['created_at', 'TEXT', 'now', 'UTC timestamp of the call'],
+])}
+
+<h2>What&rsquo;s Tracked</h2>
+<ul>
+  <li>Input tokens (context + user message) per LLM call</li>
+  <li>Output tokens (model response) per LLM call</li>
+  <li>Model name for per-model breakdowns</li>
+  <li>Session ID for per-user tracking</li>
+  <li>Timestamp for time-windowed queries (24h, 7d)</li>
 </ul>
 `
   },
