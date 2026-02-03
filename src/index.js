@@ -2033,12 +2033,16 @@ function layout(page) {
 
 html { scroll-behavior: smooth; }
 
+html, body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
 body {
   font-family: var(--mono);
   background: var(--bg-deep);
   color: var(--text-primary);
   line-height: 1.7;
-  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -2468,13 +2472,21 @@ a:hover { color: var(--cyan); text-shadow: 0 0 8px var(--cyan-glow); }
 
   .hamburger { display: block; }
 
-  .docs-content { padding: 2rem 1.5rem 3rem; }
+  .header-links { display: none; }
+
+  .docs-content { padding: 2rem 1.5rem 3rem; max-width: 100%; overflow-x: hidden; }
   .docs-footer { padding: 1.5rem 1.5rem; flex-direction: column; gap: 0.75rem; text-align: center; }
   .docs-footer a { margin-left: 0; margin: 0 0.75rem; }
 
   .page-nav { flex-direction: column; }
   .page-nav a { max-width: 100%; }
   .page-nav-next { align-items: flex-start; }
+
+  /* Tables scroll horizontally on mobile */
+  .config-table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  /* Code blocks scroll horizontally */
+  .code-block pre { max-width: 100%; }
 }
 
 /* ── SEARCH (inline header) ── */
@@ -2596,14 +2608,18 @@ a:hover { color: var(--cyan); text-shadow: 0 0 8px var(--cyan-glow); }
 
 @media (max-width: 480px) {
   .header { padding: 0.6rem 0.75rem; }
-  .header-links { gap: 1rem; }
-  .header-links a { font-size: 0.7rem; }
   .docs-content h1 { font-size: 1.5rem; }
   .docs-content { padding: 1.5rem 1rem 2.5rem; }
+  .docs-content p, .docs-content li { word-wrap: break-word; overflow-wrap: break-word; }
+  .docs-content .lead { font-size: 0.88rem; }
   .config-table { font-size: 0.72rem; }
-  .config-table td, .config-table th { padding: 0.4rem 0.5rem; }
-  .search-wrap { max-width: none; margin: 0 0.5rem; }
+  .config-table td, .config-table th { padding: 0.4rem 0.5rem; white-space: nowrap; }
+  .config-table td:last-child { white-space: normal; min-width: 150px; }
+  .search-wrap { max-width: none; margin: 0 0.5rem; flex: 1; }
   .search-kbd { display: none; }
+  .code-block code { font-size: 0.72rem; }
+  .callout { padding: 0.75rem 1rem; }
+  .callout-body { font-size: 0.78rem; }
 }
 </style>
 </head>
