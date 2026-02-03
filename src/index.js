@@ -158,7 +158,7 @@ ${codeBlock(`./target/release/aidaemon --help`, 'bash')}
 <table class="config-table">
 <thead><tr><th>Provider</th><th>Base URL</th><th>Default Models</th></tr></thead>
 <tbody>
-<tr><td><strong>Google AI Studio (Native)</strong></td><td>Native API</td><td>gemini-2.5-flash / gemini-2.5-flash-lite / gemini-2.5-pro</td></tr>
+<tr><td><strong>Google AI Studio (Native)</strong></td><td>Native API</td><td>gemini-3-flash-preview / gemini-2.5-flash-lite / gemini-3-pro-preview</td></tr>
 <tr><td>OpenAI</td><td><code>https://api.openai.com/v1</code></td><td>gpt-4o / gpt-4o-mini / gpt-4o</td></tr>
 <tr><td>Anthropic (Native)</td><td>Native API</td><td>claude-sonnet-4 / claude-haiku-4 / claude-opus-4</td></tr>
 <tr><td>Anthropic (OpenRouter)</td><td><code>https://openrouter.ai/api/v1</code></td><td>anthropic/claude-* variants</td></tr>
@@ -211,7 +211,7 @@ ${configTable([
   ['smart', 'string', '(same as primary)', 'Model for complex reasoning tasks'],
 ])}
 
-${callout('info', 'Model Defaults', 'If <code>fast</code> and <code>smart</code> are not set, they default to the same value as <code>primary</code>. Provider fallback defaults: <strong>google_genai</strong> → gemini-2.5-flash, <strong>openai_compatible</strong> → openai/gpt-4o, <strong>anthropic</strong> → claude-sonnet-4-20250514. The <a href="/getting-started/wizard">setup wizard</a> writes optimized per-tier model selections. When all three tiers resolve to the same model, auto-routing is disabled. See <a href="/router">Model Routing</a> for details.')}
+${callout('info', 'Model Defaults', 'If <code>fast</code> and <code>smart</code> are not set, they default to the same value as <code>primary</code>. Provider fallback defaults: <strong>google_genai</strong> → gemini-3-flash-preview, <strong>openai_compatible</strong> → openai/gpt-4o, <strong>anthropic</strong> → claude-sonnet-4-20250514. The <a href="/getting-started/wizard">setup wizard</a> writes optimized per-tier model selections. When all three tiers resolve to the same model, auto-routing is disabled. See <a href="/router">Model Routing</a> for details.')}
 
 <h2>[telegram]</h2>
 ${configTable([
@@ -363,9 +363,9 @@ kind = "google_genai"
 api_key = "AIza..."
 
 [provider.models]
-primary = "gemini-2.5-flash"
+primary = "gemini-3-flash-preview"
 fast = "gemini-2.5-flash-lite"
-smart = "gemini-2.5-pro"
+smart = "gemini-3-pro-preview"
 
 [telegram]
 bot_token = "123456:ABC-DEF..."
@@ -429,9 +429,9 @@ kind = "google_genai"
 api_key = "AIza..."
 
 [provider.models]
-primary = "gemini-2.5-flash"
+primary = "gemini-3-flash-preview"
 fast = "gemini-2.5-flash-lite"
-smart = "gemini-2.5-pro"`, 'toml')}
+smart = "gemini-3-pro-preview"`, 'toml')}
 
 ${callout('info', 'Recommended Setup', 'Google AI Studio provides a free API key with generous rate limits. Gemini models have native tool-calling support, web grounding, and work well with aidaemon&rsquo;s agentic loop.')}
 
@@ -813,7 +813,7 @@ password = "***REDACTED***"`, 'toml')}
 <p>Read a specific TOML key path:</p>
 ${codeBlock(`action: "get"
 key: "provider.models.primary"
-# Returns: "gemini-2.5-flash"`, 'text')}
+# Returns: "gemini-3-flash-preview"`, 'text')}
 
 <h3>set</h3>
 <p>Update a specific key with a new value (TOML literal format):</p>
@@ -1400,8 +1400,8 @@ ${callout('warn', 'Trusted vs Untrusted', 'Trusted tasks run with full terminal 
 <thead><tr><th>Tier</th><th>Use Case</th><th>Typical Model</th></tr></thead>
 <tbody>
 <tr><td><strong>Fast</strong></td><td>Simple greetings, yes/no, short lookups</td><td>gemini-2.5-flash-lite, gpt-4o-mini, claude-haiku-4</td></tr>
-<tr><td><strong>Primary</strong></td><td>General conversation, moderate tasks</td><td>gemini-2.5-flash, gpt-4o, claude-sonnet-4</td></tr>
-<tr><td><strong>Smart</strong></td><td>Complex reasoning, code generation, analysis</td><td>gemini-2.5-pro, o1-preview, claude-opus-4</td></tr>
+<tr><td><strong>Primary</strong></td><td>General conversation, moderate tasks</td><td>gemini-3-flash-preview, gpt-4o, claude-sonnet-4</td></tr>
+<tr><td><strong>Smart</strong></td><td>Complex reasoning, code generation, analysis</td><td>gemini-3-pro-preview, o1-preview, claude-opus-4</td></tr>
 </tbody>
 </table>
 
