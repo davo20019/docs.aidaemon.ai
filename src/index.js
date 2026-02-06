@@ -145,10 +145,14 @@ Health ───> GET /health (axum)`, 'text', 'architecture')}
     section: 'Getting Started',
     title: 'Build from Source',
     content: () => `
-<h1>Build from Source</h1>
-<p class="lead">Install via Homebrew, Cargo, or build from source.</p>
+<h1>Install</h1>
+<p class="lead">Install via one-line script, Homebrew, Cargo, or build from source.</p>
 
-<h2>Install via Homebrew (Recommended)</h2>
+<h2>One-line Install (Recommended)</h2>
+<p>Works on any Linux VPS or macOS machine. Downloads the latest binary and verifies its SHA256 checksum:</p>
+${codeBlock(`curl -sSfL https://get.aidaemon.ai | bash`, 'bash')}
+
+<h2>Install via Homebrew</h2>
 <p>The easiest way to install on macOS or Linux:</p>
 ${codeBlock(`brew install davo20019/tap/aidaemon`, 'bash')}
 
