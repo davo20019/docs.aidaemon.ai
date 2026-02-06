@@ -27,7 +27,8 @@ const pages = [
   {
     slug: '/',
     section: null,
-    title: 'Introduction',
+    title: 'aidaemon Documentation — Personal AI Agent Daemon',
+    description: 'Documentation for aidaemon, an open-source personal AI agent daemon. Chat via Telegram, Slack, or Discord. Extend with MCP, use any LLM.',
     content: () => `
 <h1>aidaemon</h1>
 <p class="lead">A personal AI agent that runs as a daemon. Always on, always learning. Chat from Telegram, extend with MCP, powered by any LLM.</p>
@@ -119,6 +120,7 @@ Health ───> GET /health (axum)`, 'text', 'architecture')}
     slug: '/getting-started',
     section: 'Getting Started',
     title: 'Overview',
+    description: 'Build aidaemon from source, run the setup wizard, and have your personal AI agent running in minutes.',
     content: () => `
 <h1>Getting Started</h1>
 <p class="lead">Build aidaemon from source, run the setup wizard, and have your personal AI agent running in minutes.</p>
@@ -144,6 +146,7 @@ Health ───> GET /health (axum)`, 'text', 'architecture')}
     slug: '/getting-started/build',
     section: 'Getting Started',
     title: 'Build from Source',
+    description: 'Install aidaemon via Homebrew, cargo install, cargo binstall, or build from source. Supports Linux, macOS, and Windows.',
     content: () => `
 <h1>Install</h1>
 <p class="lead">Install via one-line script, Homebrew, Cargo, or build from source.</p>
@@ -194,6 +197,7 @@ ${codeBlock(`./target/release/aidaemon --help`, 'bash')}
     slug: '/getting-started/wizard',
     section: 'Getting Started',
     title: 'First Run Wizard',
+    description: 'On first launch, aidaemon runs an interactive setup wizard to configure your LLM provider and channel tokens.',
     content: () => `
 <h1>First Run Wizard</h1>
 <p class="lead">On first launch (no config.toml found), aidaemon runs an interactive setup wizard.</p>
@@ -239,6 +243,7 @@ ${callout('info', 'Ollama Auto-Discovery', 'When selecting Ollama, the wizard qu
     slug: '/configuration',
     section: 'Configuration',
     title: 'Full config.toml Reference',
+    description: 'Complete config.toml reference for aidaemon. All configuration sections, keys, types, and defaults.',
     content: () => `
 <h1>Configuration</h1>
 <p class="lead">Complete reference for <code>config.toml</code>. All sections and their defaults.</p>
@@ -537,6 +542,7 @@ mode = "check_only"`, 'toml', 'config.toml')}
     slug: '/providers',
     section: 'Configuration',
     title: 'Provider Setup',
+    description: 'Configure LLM providers for aidaemon: OpenAI-compatible, Anthropic native, or Google Generative AI backends.',
     content: () => `
 <h1>Provider Setup</h1>
 <p class="lead">aidaemon supports three provider types, all configured in the <code>[provider]</code> section.</p>
@@ -613,6 +619,7 @@ ${callout('info', 'Ollama Discovery', 'The setup wizard auto-discovers available
     slug: '/telegram',
     section: 'Telegram',
     title: 'Bot Setup',
+    description: 'Set up aidaemon as a Telegram bot. Create a bot via BotFather, configure tokens, and enable messaging.',
     content: () => `
 <h1>Telegram Bot Setup</h1>
 <p class="lead">Telegram is aidaemon&rsquo;s primary channel, built on the teloxide framework. See also <a href="/slack">Slack</a> for workspace integration.</p>
@@ -660,6 +667,7 @@ ${callout('warn', 'Access Control', 'If <code>allowed_user_ids</code> is empty, 
     slug: '/telegram/commands',
     section: 'Telegram',
     title: 'Commands',
+    description: 'Built-in Telegram slash commands for aidaemon: /model, /clear, /cost, /status, /help, and more.',
     content: () => `
 <h1>Telegram Commands</h1>
 <p class="lead">Built-in slash commands for controlling the agent from Telegram.</p>
@@ -702,6 +710,7 @@ ${callout('info', 'Model Override', 'When you manually set a model with <code>/m
     slug: '/telegram/approval',
     section: 'Telegram',
     title: 'Approval Flow',
+    description: 'Interactive inline keyboard approval for restricted terminal commands in Telegram.',
     content: () => `
 <h1>Command Approval Flow</h1>
 <p class="lead">Interactive inline keyboard approval for restricted terminal commands.</p>
@@ -742,6 +751,7 @@ ${callout('danger', 'Untrusted Sources', 'Sessions originating from triggers (li
     slug: '/slack',
     section: 'Slack',
     title: 'Workspace Setup',
+    description: 'Connect aidaemon to Slack via Socket Mode. Create a Slack app, configure OAuth scopes, and enable real-time messaging.',
     content: () => `
 <h1>Slack Integration</h1>
 <p class="lead">Connect aidaemon to your Slack workspace via Socket Mode for real-time messaging. Requires the <code>slack</code> feature flag at compile time.</p>
@@ -819,6 +829,7 @@ ${callout('warn', 'Access Control', 'If <code>allowed_user_ids</code> is empty, 
     slug: '/slack/commands',
     section: 'Slack',
     title: 'Commands',
+    description: 'Slash commands available for aidaemon in Slack: /model, /clear, /cost, /status, and more.',
     content: () => `
 <h1>Slack Commands</h1>
 <p class="lead">Slash commands available in Slack. The same set of commands as Telegram.</p>
@@ -846,6 +857,7 @@ ${callout('info', 'Slash vs. Plain Text', 'In Slack, these commands are sent as 
     slug: '/slack/approval',
     section: 'Slack',
     title: 'Approval Flow',
+    description: 'Interactive Block Kit buttons for approving restricted terminal commands in Slack.',
     content: () => `
 <h1>Slack Approval Flow</h1>
 <p class="lead">Interactive Block Kit buttons for approving restricted terminal commands in Slack.</p>
@@ -886,6 +898,7 @@ ${callout('warn', 'Shell Operators', 'Commands containing <code>;</code> <code>|
     slug: '/discord',
     section: 'Discord',
     title: 'Bot Setup',
+    description: 'Connect aidaemon to Discord. Create a Discord application, configure the bot, and enable slash commands.',
     content: () => `
 <h1>Discord Bot Setup</h1>
 <p class="lead">Connect aidaemon to Discord via the gateway API. Requires the <code>discord</code> feature flag at compile time.</p>
@@ -949,6 +962,7 @@ ${callout('warn', 'Access Control', 'If <code>allowed_user_ids</code> is empty, 
     slug: '/discord/commands',
     section: 'Discord',
     title: 'Slash Commands',
+    description: 'Registered Discord application commands for aidaemon: /ask, /model, /clear, /status, and more.',
     content: () => `
 <h1>Discord Slash Commands</h1>
 <p class="lead">Registered application commands available in Discord. Accessible via <code>/</code> in the message input.</p>
@@ -980,6 +994,7 @@ ${callout('info', 'Command Registration', 'Slash commands are automatically regi
     slug: '/discord/approval',
     section: 'Discord',
     title: 'Approval Flow',
+    description: 'Interactive button components for approving restricted terminal commands in Discord.',
     content: () => `
 <h1>Discord Approval Flow</h1>
 <p class="lead">Interactive button components for approving restricted terminal commands in Discord.</p>
@@ -1020,6 +1035,7 @@ ${callout('info', 'Button Expiry', 'Discord interaction tokens expire after 15 m
     slug: '/tools',
     section: 'Tools',
     title: 'Tools Overview',
+    description: 'Overview of all built-in tools the aidaemon LLM agent can call: terminal, memory, browser, web search, and more.',
     content: () => `
 <h1>Tools</h1>
 <p class="lead">aidaemon provides a set of built-in tools the LLM can call autonomously during the agentic loop.</p>
@@ -1080,6 +1096,7 @@ ${callout('info', 'Dynamic Budget', 'The agent also has a built-in <code>request
     slug: '/tools/terminal',
     section: 'Tools',
     title: 'Terminal Tool',
+    description: 'Execute shell commands on the host system via aidaemon. Commands run through sh -c with risk assessment.',
     content: () => `
 <h1>Terminal Tool</h1>
 <p class="lead">Execute shell commands on the host system. Commands are run via <code>sh -c</code>.</p>
@@ -1129,6 +1146,7 @@ ${callout('danger', 'Untrusted Sessions', 'Sessions from triggers (email, etc.) 
     slug: '/tools/command-risk',
     section: 'Tools',
     title: 'Command Risk Assessment',
+    description: 'Every terminal command is scored with a 4-level risk system: Safe, Medium, High, and Critical. 60+ patterns.',
     content: () => `
 <h1>Command Risk Assessment</h1>
 <p class="lead">Every terminal command is scored with a 4-level risk system before execution.</p>
@@ -1178,6 +1196,7 @@ ${callout('info', 'Configuration', 'Set <code>terminal.permission_mode</code> in
     slug: '/tools/system-info',
     section: 'Tools',
     title: 'System Info Tool',
+    description: 'Query OS, hostname, architecture, CPU, memory, disk, uptime, and process info via the system info tool.',
     content: () => `
 <h1>System Info Tool</h1>
 <p class="lead">Query basic system information. Always enabled, no parameters.</p>
@@ -1205,6 +1224,7 @@ ${callout('info', 'Configuration', 'Set <code>terminal.permission_mode</code> in
     slug: '/tools/memory',
     section: 'Tools',
     title: 'Memory / Facts Tool',
+    description: 'Store and retrieve long-term facts that persist across sessions and are injected into the system prompt.',
     content: () => `
 <h1>Memory / Facts Tool</h1>
 <p class="lead">Store and retrieve long-term facts that persist across sessions and are injected into the system prompt.</p>
@@ -1251,6 +1271,7 @@ ${configTable([
     slug: '/tools/config-manager',
     section: 'Tools',
     title: 'Config Manager Tool',
+    description: 'The aidaemon agent can read, update, validate, and restore its own configuration file autonomously.',
     content: () => `
 <h1>Config Manager Tool</h1>
 <p class="lead">The agent can read, update, validate, and restore its own configuration file.</p>
@@ -1303,6 +1324,7 @@ ${callout('info', 'Last Known Good', 'After every successful LLM call, the curre
     slug: '/tools/browser',
     section: 'Tools',
     title: 'Browser Tool',
+    description: 'Headless Chrome automation for web browsing, form filling, and screenshots. Requires the browser feature flag.',
     content: () => `
 <h1>Browser Tool</h1>
 <p class="lead">Headless Chrome automation for web browsing, form filling, and screenshots. Requires the <code>browser</code> feature.</p>
@@ -1344,6 +1366,7 @@ profile = "Default"`, 'toml', 'config.toml')}
     slug: '/tools/sub-agents',
     section: 'Tools',
     title: 'Sub-Agent Spawning',
+    description: 'Spawn child agents for complex tasks with recursive delegation. Each sub-agent gets its own tool set.',
     content: () => `
 <h1>Sub-Agent Spawning</h1>
 <p class="lead">The agent can spawn child agents for complex tasks, enabling recursive delegation.</p>
@@ -1384,6 +1407,7 @@ ${callout('warn', 'Timeout', 'Each sub-agent invocation has a hard timeout (<cod
     slug: '/tools/cli-agents',
     section: 'Tools',
     title: 'CLI Agent Delegation',
+    description: 'Delegate tasks to Claude Code, Gemini CLI, Codex, Copilot, or Aider from within the aidaemon agent loop.',
     content: () => `
 <h1>CLI Agent Delegation</h1>
 <p class="lead">Delegate tasks to external CLI coding tools like Claude Code, Gemini CLI, Codex, Copilot, or Aider.</p>
@@ -1444,6 +1468,7 @@ timeout_secs = 120`, 'toml', 'config.toml')}
     slug: '/tools/web-search',
     section: 'Tools',
     title: 'Web Search Tool',
+    description: 'Search the web via DuckDuckGo or Brave and return titles, URLs, and snippets to the LLM agent.',
     content: () => `
 <h1>Web Search Tool</h1>
 <p class="lead">Search the web and return titles, URLs, and snippets. Supports DuckDuckGo (default, no key needed) and Brave backends.</p>
@@ -1484,6 +1509,7 @@ ${codeBlock(`1. [Page Title](https://example.com/page)
     slug: '/tools/web-fetch',
     section: 'Tools',
     title: 'Web Fetch Tool',
+    description: 'Fetch any URL and extract readable content. Supports HTML-to-text conversion with configurable limits.',
     content: () => `
 <h1>Web Fetch Tool</h1>
 <p class="lead">Fetch a URL and extract its readable content. Always enabled, no configuration required.</p>
@@ -1512,6 +1538,7 @@ ${callout('info', 'Complements Browser Tool', 'Use <code>web_fetch</code> for qu
     slug: '/tools/send-file',
     section: 'Tools',
     title: 'File Transfer',
+    description: 'Send and receive files via Telegram or Slack. Path validation and sensitive file blocking built in.',
     content: () => `
 <h1>File Transfer</h1>
 <p class="lead">Send files to the user via Telegram or Slack, and receive files from the user. Validates paths and blocks sensitive files.</p>
@@ -1551,6 +1578,7 @@ ${callout('warn', 'Outbox Directories', 'The <code>outbox_dirs</code> list contr
     slug: '/mcp',
     section: 'MCP',
     title: 'MCP Overview',
+    description: 'Extend aidaemon with Model Context Protocol servers for filesystem access, databases, APIs, and more.',
     content: () => `
 <h1>MCP Integration</h1>
 <p class="lead">Extend aidaemon with any <a href="https://modelcontextprotocol.io" target="_blank" rel="noopener">Model Context Protocol</a> server to add filesystem access, databases, APIs, and more.</p>
@@ -1592,6 +1620,7 @@ ${callout('info', 'Error Handling', 'If an MCP server fails to start or list too
     slug: '/mcp/configuration',
     section: 'MCP',
     title: 'MCP Server Config',
+    description: 'Configure MCP servers in aidaemon config.toml. Stdio and SSE transport, environment variables, and timeouts.',
     content: () => `
 <h1>MCP Server Configuration</h1>
 <p class="lead">Each MCP server is defined as a named section under <code>[mcp]</code> in config.toml.</p>
@@ -1660,6 +1689,7 @@ ${callout('warn', 'Audit Only', 'Threat detection is informational — it logs w
     slug: '/triggers',
     section: 'Triggers',
     title: 'Email Triggers',
+    description: 'Monitor email inboxes with IMAP IDLE and trigger the aidaemon agent on new messages automatically.',
     content: () => `
 <h1>Email Triggers</h1>
 <p class="lead">Monitor your inbox with IMAP IDLE and trigger the agent on new emails.</p>
@@ -1704,6 +1734,7 @@ ${callout('danger', 'Untrusted Sessions', 'Email trigger sessions are marked as 
     slug: '/skills',
     section: 'Skills',
     title: 'Skills System',
+    description: 'Dynamic prompt enhancement via markdown files. Skills inject context-specific instructions based on keyword triggers.',
     content: () => `
 <h1>Skills System</h1>
 <p class="lead">Dynamic prompt enhancement via markdown files. Skills inject context-specific instructions when triggered by keywords in user messages.</p>
@@ -1789,6 +1820,7 @@ When reviewing code, follow these guidelines:
     slug: '/scheduler',
     section: 'Scheduler',
     title: 'Scheduled Tasks',
+    description: 'Create recurring and one-shot scheduled tasks with natural language or cron expressions in aidaemon.',
     content: () => `
 <h1>Scheduled Tasks</h1>
 <p class="lead">Create recurring and one-shot tasks with natural language or cron expressions. The agent executes the task prompt on schedule.</p>
@@ -1869,6 +1901,7 @@ ${callout('warn', 'Trusted vs Untrusted', 'Trusted tasks run with full terminal 
     slug: '/router',
     section: 'Router',
     title: 'Model Routing',
+    description: 'Automatic model tier routing: Fast, Primary, or Smart. Keyword heuristics and message length classification.',
     content: () => `
 <h1>Model Routing</h1>
 <p class="lead">Automatic tier-based model selection routes each query to the most appropriate model: Fast, Primary, or Smart.</p>
@@ -1918,6 +1951,7 @@ ${callout('warn', 'Trusted vs Untrusted', 'Trusted tasks run with full terminal 
     slug: '/cost-tracking',
     section: 'Cost Tracking',
     title: 'Token Usage & Budgets',
+    description: 'Track token consumption per model and session. Set daily budgets and check stats via /cost command.',
     content: () => `
 <h1>Token Usage &amp; Cost Tracking</h1>
 <p class="lead">Track token consumption per model and session. Set daily budgets to control spending. Check stats from Telegram with <code>/cost</code>.</p>
@@ -1978,6 +2012,7 @@ ${configTable([
     slug: '/architecture',
     section: 'Architecture',
     title: 'Agent Loop & Error Recovery',
+    description: 'The aidaemon agentic loop: message handling, LLM calls, tool execution, stall detection, and error recovery.',
     content: () => `
 <h1>Agent Loop &amp; Error Recovery</h1>
 <p class="lead">The core agentic loop: receive message, call LLM, execute tools, iterate, respond.</p>
@@ -2066,6 +2101,7 @@ ${callout('info', 'Last Known Good', 'After every successful LLM call, the curre
     slug: '/architecture/state',
     section: 'Architecture',
     title: 'State Management & Memory',
+    description: 'SQLite-backed persistence with semantic search via embeddings, tri-hybrid retrieval, and memory layers.',
     content: () => `
 <h1>State Management &amp; Memory</h1>
 <p class="lead">SQLite-backed persistence with in-memory working memory, semantic search via embeddings, and tri-hybrid retrieval.</p>
@@ -2184,6 +2220,7 @@ ${configTable([
     slug: '/service-install',
     section: 'Service',
     title: 'systemd & launchd Setup',
+    description: 'Install aidaemon as a systemd or launchd service that starts on boot and runs continuously.',
     content: () => `
 <h1>Service Installation</h1>
 <p class="lead">Install aidaemon as a system service that starts on boot and runs forever.</p>
@@ -2253,6 +2290,7 @@ ${codeBlock(`curl http://127.0.0.1:8080/health
     slug: '/event-sourcing',
     section: 'Event Sourcing',
     title: 'Event System',
+    description: 'Immutable event log for all agent actions. Daily consolidation into facts and procedures. Session context.',
     content: () => `
 <h1>Event Sourcing</h1>
 <p class="lead">Every agent action is recorded as an immutable event. Events are the single source of truth for what happened during a session.</p>
@@ -2315,6 +2353,7 @@ ${callout('info', 'Immutability', 'Events are append-only. The <code>consolidate
     slug: '/plans',
     section: 'Plans',
     title: 'Task Plans',
+    description: 'Persistent multi-step task plans with automatic detection, step tracking, and crash recovery.',
     content: () => `
 <h1>Task Plans</h1>
 <p class="lead">Persistent multi-step plans that survive crashes and enable complex task execution with progress tracking.</p>
@@ -2374,6 +2413,7 @@ ${callout('info', 'Checkpoint Data', 'Each step stores intermediate results in t
     slug: '/health-monitoring',
     section: 'Health Monitoring',
     title: 'Service Probes',
+    description: 'Define HTTP, TCP, command, and file health probes for your services with alerting and trend tracking.',
     content: () => `
 <h1>Health Monitoring</h1>
 <p class="lead">Define health probes for your services and get alerted when something breaks.</p>
@@ -2435,6 +2475,7 @@ ${callout('info', 'Dynamic Probes', 'Probes can also be created at runtime by th
     slug: '/updates',
     section: 'Updates',
     title: 'Self-Updater',
+    description: 'Auto-update aidaemon from GitHub releases. Three modes: notify, download, or auto-install.',
     content: () => `
 <h1>Self-Updater</h1>
 <p class="lead">aidaemon can check for new releases on GitHub and update itself automatically.</p>
@@ -2541,8 +2582,22 @@ function layout(page) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>${page.title} — aidaemon docs</title>
-<meta name="description" content="Documentation for aidaemon — a personal AI agent that runs as a daemon.">
+<title>${page.title}${page.section ? ' — ' + page.section : ''} | aidaemon docs</title>
+<meta name="description" content="${page.description || 'Documentation for aidaemon — an open-source personal AI agent daemon.'}">
+<link rel="canonical" href="https://docs.aidaemon.ai${page.slug === '/' ? '' : page.slug}">
+<meta name="robots" content="${page.title === 'Not Found' ? 'noindex, nofollow' : 'index, follow'}">
+<meta property="og:title" content="${page.title}${page.section ? ' — ' + page.section : ''} | aidaemon docs">
+<meta property="og:description" content="${page.description || 'Documentation for aidaemon — an open-source personal AI agent daemon.'}">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://docs.aidaemon.ai${page.slug === '/' ? '' : page.slug}">
+<meta property="og:site_name" content="aidaemon docs">
+<meta property="og:image" content="https://aidaemon.ai/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="${page.title}${page.section ? ' — ' + page.section : ''} | aidaemon docs">
+<meta name="twitter:description" content="${page.description || 'Documentation for aidaemon — an open-source personal AI agent daemon.'}">
+<meta name="twitter:image" content="https://aidaemon.ai/og-image.png">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👁</text></svg>">
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-M14WQGF5W8"></script>
@@ -2553,7 +2608,7 @@ function layout(page) {
   gtag('config', 'G-M14WQGF5W8');
 </script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
 
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -3002,6 +3057,20 @@ a:hover { color: var(--cyan); text-shadow: 0 0 8px var(--cyan-glow); }
 .docs-footer a:hover { color: var(--green); text-shadow: none; }
 
 /* ── RESPONSIVE ── */
+.breadcrumbs {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+.breadcrumbs a { color: var(--text-secondary); }
+.breadcrumbs a:hover { color: var(--green); }
+.bc-sep { color: var(--border-bright); }
+.bc-current { color: var(--text-secondary); }
+
 @media (max-width: 900px) {
   .docs-layout {
     grid-template-columns: 1fr;
@@ -3201,6 +3270,20 @@ a:hover { color: var(--cyan); text-shadow: 0 0 8px var(--cyan-glow); }
   .docs-footer { padding: 1rem 0.75rem; }
 }
 </style>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "aidaemon docs",
+  "url": "https://docs.aidaemon.ai",
+  "description": "Documentation for aidaemon — an open-source personal AI agent daemon.",
+  "publisher": {
+    "@type": "Person",
+    "name": "David Loor",
+    "url": "https://davidloor.com"
+  }
+}
+</script>
 </head>
 <body>
 
@@ -3228,6 +3311,7 @@ a:hover { color: var(--cyan); text-shadow: 0 0 8px var(--cyan-glow); }
   <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
   <main>
     <div class="docs-content">
+      <nav aria-label="breadcrumb" class="breadcrumbs">${page.slug === '/' ? '' : '<a href="/">Docs</a>' + (page.section ? ' <span class="bc-sep">/</span> <span>' + page.section + '</span>' : '') + ' <span class="bc-sep">/</span> <span class="bc-current">' + page.title + '</span>'}</nav>
       ${page.content()}
       ${renderPageNav(page.slug)}
     </div>
@@ -3364,11 +3448,25 @@ export default {
     const url = new URL(request.url);
     let path = url.pathname.replace(/\/+$/, '') || '/';
 
+    if (path === '/robots.txt') {
+      return new Response('User-agent: *\nAllow: /\nSitemap: https://docs.aidaemon.ai/sitemap.xml', {
+        headers: { 'content-type': 'text/plain', 'cache-control': 'public, max-age=86400' },
+      });
+    }
+
+    if (path === '/sitemap.xml') {
+      const urls = pages.map(p => `  <url><loc>https://docs.aidaemon.ai${p.slug === '/' ? '' : p.slug}</loc><changefreq>weekly</changefreq></url>`).join('\n');
+      return new Response(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>`, {
+        headers: { 'content-type': 'application/xml', 'cache-control': 'public, max-age=86400' },
+      });
+    }
+
     const page = pages.find(p => p.slug === path);
     if (!page) {
       return new Response(layout({
         slug: path,
         title: 'Not Found',
+        description: 'Page not found.',
         content: () => '<h1>404</h1><p class="lead">Page not found.</p><p><a href="/">Return to documentation</a></p>',
       }), {
         status: 404,
