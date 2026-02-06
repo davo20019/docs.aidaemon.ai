@@ -32,12 +32,12 @@ const pages = [
 <h1>aidaemon</h1>
 <p class="lead">A personal AI agent that runs as a daemon. Always on, always learning. Chat from Telegram, extend with MCP, powered by any LLM.</p>
 
-<p>aidaemon is a self-hosted AI agent written in Rust that runs as a background service on your machine. It connects to any OpenAI-compatible LLM provider, communicates via Telegram or Slack, and can execute tools, manage its own configuration, remember facts, browse the web, and spawn sub-agents — all autonomously.</p>
+<p>aidaemon is a self-hosted AI agent written in Rust that runs as a background service on your machine. It connects to any OpenAI-compatible LLM provider, communicates via Telegram, Slack, or Discord, and can execute tools, manage its own configuration, remember facts, browse the web, and spawn sub-agents — all autonomously.</p>
 
 <h2>Key Features</h2>
 <ul>
   <li><strong>Daemon architecture</strong> — runs as systemd/launchd service, always available</li>
-  <li><strong>Multi-channel</strong> — chat via Telegram or Slack, multi-user access control</li>
+  <li><strong>Multi-channel</strong> — chat via Telegram, Slack, or Discord, multi-user access control</li>
   <li><strong>Agentic tool use</strong> — autonomous multi-step reasoning with up to 10 iterations</li>
   <li><strong>MCP integration</strong> — extend with any Model Context Protocol server</li>
   <li><strong>Persistent memory</strong> — SQLite-backed history with semantic search via embeddings</li>
@@ -54,31 +54,47 @@ const pages = [
   <li><strong>File transfer</strong> — send and receive files via Telegram with path security</li>
   <li><strong>Secrets management</strong> — OS keychain and environment variable support</li>
   <li><strong>Token cost tracking</strong> — per-model usage stats, daily budgets, /cost command</li>
+  <li><strong>Event sourcing</strong> — immutable event log with daily consolidation into facts and procedures</li>
+  <li><strong>Persistent plans</strong> — automatic plan detection, step tracking, and crash recovery</li>
+  <li><strong>Health monitoring</strong> — HTTP, TCP, command, and file probes with alerting</li>
+  <li><strong>Dynamic skills</strong> — install from registries or auto-promote repeated procedures</li>
+  <li><strong>Self-updater</strong> — auto-update from GitHub releases with configurable modes</li>
+  <li><strong>Discord integration</strong> — slash commands, interactive approval buttons, multi-bot support</li>
+  <li><strong>Command risk assessment</strong> — 4-level risk scoring (Safe/Medium/High/Critical) for terminal commands</li>
 </ul>
 
 <h2>Architecture at a Glance</h2>
 ${codeBlock(`Telegram ──┐
 Slack    ──┤──> ChannelHub ──> Agent ──> LLM Provider
-              │
-              ├──> Tools
-              │    ├── terminal
-              │    ├── system info
-              │    ├── memory (facts)
-              │    ├── config manager
-              │    ├── web search + fetch
-              │    ├── browser (optional)
-              │    ├── file transfer
-              │    ├── sub-agents
-              │    ├── CLI agents
-              │    ├── scheduler
-              │    └── MCP tools (dynamic)
-              │
-              ├──> State
-              │    ├── SQLite persistence
-              │    └── in-memory working mem
-              │
-              └──> Facts
-                   └── injected into system prompt
+Discord  ──┘         │
+                     ├──> Tools
+                     │    ├── terminal (risk assessment)
+                     │    ├── system info
+                     │    ├── memory (facts)
+                     │    ├── config manager
+                     │    ├── web search + fetch
+                     │    ├── browser (optional)
+                     │    ├── file transfer
+                     │    ├── sub-agents + CLI agents
+                     │    ├── health probes
+                     │    ├── manage skills
+                     │    ├── scheduler
+                     │    └── MCP tools (dynamic)
+                     │
+                     ├──> Events
+                     │    ├── immutable event log
+                     │    └── daily consolidation
+                     │
+                     ├──> Plans
+                     │    ├── detect + generate
+                     │    └── track + recover
+                     │
+                     ├──> State
+                     │    ├── SQLite persistence
+                     │    └── in-memory working mem
+                     │
+                     └──> Facts
+                          └── injected into system prompt
 
 Triggers ───> EventBus ───> Agent
    └── IMAP IDLE
@@ -92,6 +108,10 @@ Health ───> GET /health (axum)`, 'text', 'architecture')}
   <li><a href="/tools">Tools</a> — built-in and extensible tool system</li>
   <li><a href="/telegram">Telegram</a> — bot setup, commands, approval flow</li>
   <li><a href="/slack">Slack</a> — workspace integration via Socket Mode</li>
+  <li><a href="/discord">Discord</a> — bot setup, slash commands, approval buttons</li>
+  <li><a href="/event-sourcing">Event Sourcing</a> — immutable events and consolidation</li>
+  <li><a href="/plans">Plans</a> — persistent multi-step task plans</li>
+  <li><a href="/health-monitoring">Health Monitoring</a> — service probes and alerting</li>
 </ul>
 `
   },
@@ -126,9 +146,18 @@ Health ───> GET /health (axum)`, 'text', 'architecture')}
     title: 'Build from Source',
     content: () => `
 <h1>Build from Source</h1>
-<p class="lead">Clone the repository and compile with Cargo.</p>
+<p class="lead">Install via Homebrew, Cargo, or build from source.</p>
 
-<h2>Clone &amp; Build</h2>
+<h2>Install via Homebrew (Recommended)</h2>
+<p>The easiest way to install on macOS or Linux:</p>
+${codeBlock(`brew install davo20019/tap/aidaemon`, 'bash')}
+
+<h2>Install via Cargo</h2>
+${codeBlock(`cargo install aidaemon
+# Or for pre-built binaries:
+cargo binstall aidaemon`, 'bash')}
+
+<h2>Clone &amp; Build from Source</h2>
 ${codeBlock(`git clone https://github.com/davo20019/aidaemon.git
 cd aidaemon
 cargo build --release`, 'bash')}
@@ -242,6 +271,14 @@ ${configTable([
   ['use_threads', 'bool', 'true', 'Reply in threads by default'],
 ])}
 
+<h2>[discord]</h2>
+<p>Requires the <code>discord</code> feature flag at compile time. See <a href="/discord">Discord</a> for full setup guide.</p>
+${configTable([
+  ['bot_token', 'string', '&mdash;', 'Discord bot token from the Developer Portal'],
+  ['allowed_user_ids', 'array', '[]', 'Discord user IDs allowed to interact. Empty = no restriction.'],
+  ['guild_id', 'integer', 'null', 'Optional guild/server ID to restrict the bot to a single server'],
+])}
+
 <h2>[state]</h2>
 ${configTable([
   ['db_path', 'string', '"aidaemon.db"', 'Path to SQLite database file'],
@@ -257,6 +294,7 @@ ${configTable([
   ['allowed_prefixes', 'array', '(see below)', 'Command prefixes auto-approved without user confirmation'],
   ['initial_timeout_secs', 'integer', '30', 'Timeout in seconds for initial command execution'],
   ['max_output_chars', 'integer', '4000', 'Truncate command output beyond this length'],
+  ['permission_mode', 'string', '"default"', 'Risk permission mode: <code>default</code>, <code>cautious</code>, or <code>yolo</code>. See <a href="/tools/command-risk">Command Risk</a>.'],
 ])}
 
 <p>Default allowed prefixes:</p>
@@ -300,6 +338,7 @@ ${configTable([
 ${configTable([
   ['dir', 'string', '"skills"', 'Directory containing skill markdown files'],
   ['enabled', 'bool', 'true', 'Enable the skills system'],
+  ['registries', 'array', '[]', 'URLs of skill registry JSON manifests for browsing/installing skills'],
 ])}
 
 <h2>[subagents]</h2>
@@ -381,6 +420,33 @@ bot_token = "\${TELEGRAM_BOT_TOKEN}"`, 'toml')}
 
 ${callout('info', 'Supported Keychain Fields', 'Fields supporting <code>"keychain"</code>: <code>provider.api_key</code>, <code>telegram.bot_token</code>, <code>slack.app_token</code>, <code>slack.bot_token</code>, <code>triggers.email.password</code>, <code>state.encryption_key</code>, <code>search.api_key</code>.')}
 
+<h2>[health]</h2>
+<p>Health monitoring system. See <a href="/health-monitoring">Health Monitoring</a>.</p>
+${configTable([
+  ['enabled', 'bool', 'true', 'Enable the health monitoring system'],
+  ['tick_interval_secs', 'integer', '30', 'How often to check for due probes'],
+  ['result_retention_days', 'integer', '7', 'Days to retain health check results'],
+])}
+
+<h2>[[health.probes]]</h2>
+${configTable([
+  ['name', 'string', '&mdash;', 'Probe name'],
+  ['probe_type', 'string', '&mdash;', 'Type: http, command, file, or port'],
+  ['target', 'string', '&mdash;', 'Target URL, command, file path, or host:port'],
+  ['schedule', 'string', '&mdash;', 'Cron expression or interval'],
+  ['consecutive_failures_alert', 'integer', '3', 'Alert after N consecutive failures'],
+  ['alert_session_ids', 'array', '[]', 'Session IDs to notify on alert'],
+])}
+
+<h2>[updates]</h2>
+<p>Self-update system. See <a href="/updates">Self-Updater</a>.</p>
+${configTable([
+  ['mode', 'string', '"check_only"', 'Update mode: enable, check_only, or disable'],
+  ['check_interval_hours', 'integer', '24', 'Hours between update checks'],
+  ['check_at_utc_hour', 'integer', 'null', 'Specific UTC hour (0-23) for daily check'],
+  ['confirmation_timeout_mins', 'integer', '60', 'Minutes to wait for user approval'],
+])}
+
 <h2>Example Config</h2>
 ${codeBlock(`[provider]
 kind = "google_genai"
@@ -441,7 +507,26 @@ trusted = true
 [files]
 enabled = true
 inbox_dir = "~/.aidaemon/files/inbox"
-outbox_dirs = ["~"]`, 'toml', 'config.toml')}
+outbox_dirs = ["~"]
+
+# Discord (requires --features discord)
+# [discord]
+# bot_token = "MTIz..."
+# allowed_user_ids = [123456789012345678]
+
+# Health monitoring
+[health]
+enabled = true
+
+[[health.probes]]
+name = "API Server"
+probe_type = "http"
+target = "https://api.example.com/health"
+schedule = "every 5m"
+
+# Self-updater
+[updates]
+mode = "check_only"`, 'toml', 'config.toml')}
 `
   },
   {
@@ -553,6 +638,9 @@ ${callout('warn', 'Access Control', 'If <code>allowed_user_ids</code> is empty, 
   <li><strong>Screenshot sharing</strong> — browser screenshots sent as photos with captions</li>
   <li><strong>File transfer</strong> — send and receive documents, photos, audio, video via Telegram</li>
   <li><strong>Live task status</strong> — <code>/tasks</code> shows running agent tasks with elapsed time</li>
+  <li><strong>Inline approval buttons</strong> — Allow Once / Allow Always / Deny buttons for command approval</li>
+  <li><strong>Multi-bot support</strong> — configure multiple Telegram bots via <code>[[telegram.bots]]</code></li>
+  <li><strong>Enhanced file handling</strong> — MIME type detection, size limits, and path security validation</li>
 </ul>
 
 <h2>Retry Behavior</h2>
@@ -790,7 +878,141 @@ ${callout('info', 'Slash vs. Plain Text', 'In Slack, these commands are sent as 
 ${callout('warn', 'Shell Operators', 'Commands containing <code>;</code> <code>|</code> <code>&amp;&amp;</code> <code>||</code> <code>$()</code> or backticks <strong>always</strong> require approval, even if the prefix is whitelisted.')}
 `
   },
+{
+    slug: '/discord',
+    section: 'Discord',
+    title: 'Bot Setup',
+    content: () => `
+<h1>Discord Bot Setup</h1>
+<p class="lead">Connect aidaemon to Discord via the gateway API. Requires the <code>discord</code> feature flag at compile time.</p>
+
+${callout('info', 'Feature Flag', 'Build with <code>cargo build --release --features discord</code> to enable Discord support.')}
+
+<h2>Create a Discord Application</h2>
+<ol>
+  <li>Go to the <a href="https://discord.com/developers/applications" target="_blank" rel="noopener">Discord Developer Portal</a></li>
+  <li>Click <strong>New Application</strong> and name it (e.g., &ldquo;aidaemon&rdquo;)</li>
+  <li>Under <strong>Bot</strong>, click <strong>Add Bot</strong></li>
+  <li>Copy the <strong>Bot Token</strong> &mdash; this is your <code>bot_token</code></li>
+  <li>Enable these <strong>Privileged Gateway Intents</strong>:
+    <ul>
+      <li><code>Message Content Intent</code> &mdash; read message text</li>
+      <li><code>Server Members Intent</code> &mdash; resolve user info</li>
+    </ul>
+  </li>
+  <li>Under <strong>OAuth2 &rarr; URL Generator</strong>, select scopes <code>bot</code> and <code>applications.commands</code>, then permissions: Send Messages, Read Message History, Attach Files, Use Slash Commands</li>
+  <li>Use the generated URL to invite the bot to your server</li>
+</ol>
+
+<h2>Configuration</h2>
+${codeBlock(`[discord]
+bot_token = "MTIzNDU2Nzg5MDEyMzQ1Njc4OQ.AbCdEf.xxxxx"
+allowed_user_ids = [123456789012345678]
+guild_id = 987654321098765432`, 'toml', 'config.toml')}
+
+${configTable([
+  ['bot_token', 'string', '&mdash;', 'Discord bot token from the Developer Portal. Supports <code>"keychain"</code>.'],
+  ['allowed_user_ids', 'array', '[]', 'Discord user IDs (snowflake integers) allowed to interact. Empty = no restriction.'],
+  ['guild_id', 'integer', 'null', 'Optional server/guild ID. If set, the bot only responds in that server.'],
+])}
+
+<h2>Get Your Discord User ID</h2>
+<p>Enable <strong>Developer Mode</strong> in Discord settings (Appearance &rarr; Advanced), then right-click your username and select <strong>Copy User ID</strong>.</p>
+
+<h2>Features</h2>
+<ul>
+  <li><strong>Gateway connection</strong> &mdash; real-time WebSocket connection via serenity framework</li>
+  <li><strong>Slash commands</strong> &mdash; registered application commands (see <a href="/discord/commands">Commands</a>)</li>
+  <li><strong>Interactive buttons</strong> &mdash; approval flow with clickable buttons (see <a href="/discord/approval">Approval Flow</a>)</li>
+  <li><strong>File transfer</strong> &mdash; send and receive files as Discord attachments</li>
+  <li><strong>Message splitting</strong> &mdash; long responses split to respect Discord&rsquo;s 2000-char message limit</li>
+  <li><strong>Auto-reconnect</strong> &mdash; exponential backoff on connection failure (5s &rarr; 60s cap)</li>
+  <li><strong>User allowlist</strong> &mdash; per-bot token access control</li>
+  <li><strong>Multi-bot support</strong> &mdash; run multiple Discord bots with separate configs</li>
+</ul>
+
+<h2>Session Model</h2>
+<p>Discord sessions are identified by channel:</p>
+<ul>
+  <li><strong>Channel message:</strong> <code>discord:{channel_id}</code></li>
+</ul>
+<p>Each channel maintains its own conversation history, working memory, and facts context.</p>
+
+${callout('warn', 'Access Control', 'If <code>allowed_user_ids</code> is empty, <strong>anyone</strong> who can message the bot can interact with it. Always set this in production.')}
+`
+  },
   {
+    slug: '/discord/commands',
+    section: 'Discord',
+    title: 'Slash Commands',
+    content: () => `
+<h1>Discord Slash Commands</h1>
+<p class="lead">Registered application commands available in Discord. Accessible via <code>/</code> in the message input.</p>
+
+<table class="config-table">
+<thead><tr><th>Command</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>/ask &lt;message&gt;</code></td><td>Send a message to the agent</td></tr>
+<tr><td><code>/model</code></td><td>Show the current active model</td></tr>
+<tr><td><code>/model &lt;name&gt;</code></td><td>Switch to a specific model (disables auto-routing)</td></tr>
+<tr><td><code>/models</code></td><td>List all available models from the provider</td></tr>
+<tr><td><code>/auto</code></td><td>Re-enable automatic model routing</td></tr>
+<tr><td><code>/clear</code></td><td>Clear session conversation history</td></tr>
+<tr><td><code>/cost</code></td><td>Show token usage statistics</td></tr>
+<tr><td><code>/tasks</code></td><td>List running and recent agent tasks</td></tr>
+<tr><td><code>/cancel &lt;id&gt;</code></td><td>Cancel a running task by ID</td></tr>
+<tr><td><code>/status</code></td><td>Show daemon status and uptime</td></tr>
+<tr><td><code>/help</code></td><td>Show list of available commands</td></tr>
+</tbody>
+</table>
+
+<h2>Regular Messages</h2>
+<p>In addition to slash commands, users can also interact by mentioning the bot or sending direct messages. The bot processes these as regular conversation messages.</p>
+
+${callout('info', 'Command Registration', 'Slash commands are automatically registered with Discord when the bot connects. If you change guild_id, commands will re-register for the new scope.')}
+`
+  },
+  {
+    slug: '/discord/approval',
+    section: 'Discord',
+    title: 'Approval Flow',
+    content: () => `
+<h1>Discord Approval Flow</h1>
+<p class="lead">Interactive button components for approving restricted terminal commands in Discord.</p>
+
+<h2>How It Works</h2>
+<ol>
+  <li>The agent requests a terminal command that isn&rsquo;t in the allowed prefixes list (or contains shell operators)</li>
+  <li>An approval message is sent to the Discord channel with interactive buttons</li>
+  <li>The user sees three clickable buttons:</li>
+</ol>
+
+<div style="margin: 1.5rem 0; padding: 1rem; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 6px;">
+  <p style="margin-bottom: 0.75rem; color: var(--text-secondary); font-size: 0.85rem;">Command requires approval:</p>
+  <code style="display: block; margin-bottom: 1rem;">rm -rf /tmp/old-cache</code>
+  <div style="display: flex; gap: 0.5rem;">
+    <span style="padding: 0.4rem 0.8rem; background: var(--bg-elevated); border: 1px solid var(--green); border-radius: 4px; font-size: 0.75rem; color: var(--green);">Allow Once</span>
+    <span style="padding: 0.4rem 0.8rem; background: var(--bg-elevated); border: 1px solid var(--cyan); border-radius: 4px; font-size: 0.75rem; color: var(--cyan);">Allow Always</span>
+    <span style="padding: 0.4rem 0.8rem; background: var(--bg-elevated); border: 1px solid var(--red); border-radius: 4px; font-size: 0.75rem; color: var(--red);">Deny</span>
+  </div>
+</div>
+
+<h2>Approval Options</h2>
+<table class="config-table">
+<thead><tr><th>Option</th><th>Behavior</th></tr></thead>
+<tbody>
+<tr><td><strong>Allow Once</strong></td><td>Execute the command this time only</td></tr>
+<tr><td><strong>Allow Always</strong></td><td>Execute and persist the command prefix for future auto-approval</td></tr>
+<tr><td><strong>Deny</strong></td><td>Reject the command &mdash; agent receives denial message</td></tr>
+</tbody>
+</table>
+
+<p>The approval flow in Discord uses serenity&rsquo;s <code>ComponentInteraction</code> API. &ldquo;Allow Always&rdquo; persists the prefix to SQLite so it survives daemon restarts.</p>
+
+${callout('info', 'Button Expiry', 'Discord interaction tokens expire after 15 minutes. If no response is received within that window, the approval request times out and the command is denied.')}
+`
+  },
+    {
     slug: '/tools',
     section: 'Tools',
     title: 'Tools Overview',
@@ -822,6 +1044,9 @@ ${codeBlock(`trait Tool {
 <tr><td><a href="/tools/sub-agents"><code>spawn_agent</code></a></td><td>Spawn recursive sub-agents</td><td>[subagents]</td></tr>
 <tr><td><a href="/tools/cli-agents"><code>cli_agent</code></a></td><td>Delegate to external CLI tools</td><td>[cli_agents]</td></tr>
 <tr><td><a href="/scheduler"><code>scheduler</code></a></td><td>Create, manage, and run scheduled tasks</td><td>[scheduler]</td></tr>
+<tr><td><a href="/tools/command-risk"><code>command_risk</code></a></td><td>4-level risk assessment for terminal commands</td><td>[terminal]</td></tr>
+<tr><td><a href="/health-monitoring"><code>health_probe</code></a></td><td>Manage and run health probes</td><td>[health]</td></tr>
+<tr><td><a href="/skills"><code>manage_skills</code></a></td><td>Add, remove, browse, install dynamic skills</td><td>[skills]</td></tr>
 <tr><td><a href="/mcp">MCP tools</a></td><td>Dynamically discovered via MCP servers</td><td>[mcp.*]</td></tr>
 </tbody>
 </table>
@@ -841,6 +1066,8 @@ ${callout('info', 'Dynamic Budget', 'The agent also has a built-in <code>request
   <li>SendFileTool (if files.enabled)</li>
   <li>CliAgentTool (if enabled)</li>
   <li>SchedulerTool (if scheduler.enabled)</li>
+  <li>HealthProbeTool (if health.enabled)</li>
+  <li>ManageSkillsTool</li>
   <li>MCP tools (if configured)</li>
 </ol>
 `
@@ -894,7 +1121,56 @@ max_output_chars = 4000`, 'toml', 'config.toml')}
 ${callout('danger', 'Untrusted Sessions', 'Sessions from triggers (email, etc.) are flagged as untrusted. <strong>All</strong> commands in untrusted sessions require approval regardless of the whitelist.')}
 `
   },
-  {
+{
+    slug: '/tools/command-risk',
+    section: 'Tools',
+    title: 'Command Risk Assessment',
+    content: () => `
+<h1>Command Risk Assessment</h1>
+<p class="lead">Every terminal command is scored with a 4-level risk system before execution.</p>
+
+<h2>Risk Levels</h2>
+<table class="config-table">
+<thead><tr><th>Level</th><th>Auto-Approved?</th><th>Examples</th></tr></thead>
+<tbody>
+<tr><td><strong>Safe</strong></td><td>Yes (if prefix whitelisted)</td><td><code>ls</code>, <code>cat</code>, <code>date</code>, <code>echo</code></td></tr>
+<tr><td><strong>Medium</strong></td><td>After first approval</td><td><code>curl</code>, <code>git push</code>, <code>npm install</code></td></tr>
+<tr><td><strong>High</strong></td><td>After first approval</td><td><code>rm</code>, <code>mv</code>, <code>chmod</code>, <code>kill</code></td></tr>
+<tr><td><strong>Critical</strong></td><td>Never persisted (default)</td><td><code>sudo rm -rf</code>, <code>dd</code>, <code>mkfs</code></td></tr>
+</tbody>
+</table>
+
+<h2>Permission Modes</h2>
+${configTable([
+  ['default', '—', '—', 'Safe/Medium/High approvals persist across restarts. Critical is per-session only.'],
+  ['cautious', '—', '—', 'All approvals are per-session only.'],
+  ['yolo', '—', '—', 'All approvals persist forever.'],
+])}
+
+<h2>Dangerous Constructs</h2>
+<p>Patterns that always elevate risk:</p>
+<ul>
+  <li>Command substitution: <code>$(...)</code> and backticks</li>
+  <li>Process substitution: <code>&gt;(...)</code>, <code>&lt;(...)</code></li>
+  <li>Redirection: <code>&gt;</code>, <code>&gt;&gt;</code></li>
+  <li>Multiple commands: <code>;</code>, <code>&amp;&amp;</code>, <code>||</code></li>
+  <li>Pipes into shells or <code>sudo</code></li>
+</ul>
+
+<h2>Sensitive Path Detection</h2>
+<p>Commands referencing these files are automatically elevated:</p>
+<ul>
+  <li><code>.env</code> &mdash; environment secrets</li>
+  <li>SSH keys: <code>id_rsa</code>, <code>id_ed25519</code></li>
+  <li>Cloud configs: <code>.aws</code>, <code>.kube</code>, <code>.docker</code></li>
+  <li>System auth: <code>shadow</code>, <code>passwd</code>, <code>sudoers</code></li>
+  <li>Credentials: <code>master.key</code>, <code>.netrc</code>, <code>.pgpass</code></li>
+</ul>
+
+${callout('info', 'Configuration', 'Set <code>terminal.permission_mode</code> in config.toml. Default is <code>"default"</code>.')}
+`
+},
+    {
     slug: '/tools/system-info',
     section: 'Tools',
     title: 'System Info Tool',
@@ -1482,6 +1758,27 @@ When reviewing code, follow these guidelines:
 ## Known Facts
 ### user
 - name: David`, 'text', 'system prompt structure')}
+
+<h2>Dynamic Skills</h2>
+<p>Beyond static filesystem skills, aidaemon supports runtime skill management through the <code>manage_skills</code> tool and optional registries.</p>
+
+<h3>manage_skills Tool Actions</h3>
+<table class="config-table">
+<thead><tr><th>Action</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>add</code></td><td>Fetch a skill from a URL</td></tr>
+<tr><td><code>add_inline</code></td><td>Parse raw markdown content as a skill</td></tr>
+<tr><td><code>list</code></td><td>Show all loaded skills with metadata</td></tr>
+<tr><td><code>remove</code></td><td>Delete a skill by name</td></tr>
+<tr><td><code>enable</code> / <code>disable</code></td><td>Activate or deactivate a skill</td></tr>
+<tr><td><code>browse</code></td><td>Search across configured registries</td></tr>
+<tr><td><code>install</code></td><td>Install from a registry</td></tr>
+<tr><td><code>update</code></td><td>Re-fetch skill from source URL</td></tr>
+</tbody>
+</table>
+
+<h3>Auto-Promotion</h3>
+<p>A background task runs every 12 hours, evaluating frequently-used procedures for automatic promotion into reusable skills.</p>
 `
   },
   {
@@ -1739,11 +2036,21 @@ ${callout('info', 'Last Known Good', 'After every successful LLM call, the curre
   <li><code>_untrusted_source</code> — flag set for trigger-originated sessions</li>
 </ul>
 
+<h2>Stall &amp; Repetition Detection</h2>
+<p>The agent loop includes safeguards against getting stuck:</p>
+<ul>
+  <li><strong>Stall detection</strong> &mdash; if the same tool is called 3+ times consecutively with similar arguments, the loop breaks</li>
+  <li><strong>Repetition detection</strong> &mdash; detects repeated response text and forces a break</li>
+  <li><strong>Hard iteration limit</strong> &mdash; default 10, extendable to 25 via <code>request_more_iterations</code></li>
+</ul>
+
 <h2>Session Types</h2>
 <table class="config-table">
 <thead><tr><th>Session Type</th><th>Format</th><th>Trusted</th></tr></thead>
 <tbody>
 <tr><td>Telegram chat</td><td>Chat ID as string</td><td>Yes</td></tr>
+<tr><td>Slack channel</td><td><code>slack:{channel_id}</code> or <code>slack:{channel_id}:{thread_ts}</code></td><td>Yes</td></tr>
+<tr><td>Discord channel</td><td><code>discord:{channel_id}</code></td><td>Yes</td></tr>
 <tr><td>Email trigger</td><td><code>email_trigger</code></td><td>No</td></tr>
 <tr><td>Event trigger</td><td><code>event_{uuid}</code></td><td>No</td></tr>
 <tr><td>Sub-agent</td><td><code>sub-{depth}-{uuid}</code></td><td>Inherited</td></tr>
@@ -1936,6 +2243,243 @@ ${codeBlock(`curl http://127.0.0.1:8080/health
 # {"status": "ok"}`, 'bash')}
 
 <p>The health endpoint is served by axum on the configured <code>daemon.health_bind:daemon.health_port</code>.</p>
+`
+  },
+  {
+    slug: '/event-sourcing',
+    section: 'Event Sourcing',
+    title: 'Event System',
+    content: () => `
+<h1>Event Sourcing</h1>
+<p class="lead">Every agent action is recorded as an immutable event. Events are the single source of truth for what happened during a session.</p>
+
+<h2>Event Types</h2>
+<p>The system tracks 16 event types across 6 categories:</p>
+
+<table class="config-table">
+<thead><tr><th>Category</th><th>Event Type</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td rowspan="2"><strong>Session</strong></td><td><code>SessionStart</code></td><td>New conversation session begins</td></tr>
+<tr><td><code>SessionEnd</code></td><td>Session terminated</td></tr>
+<tr><td rowspan="2"><strong>Conversation</strong></td><td><code>UserMessage</code></td><td>User sends a message</td></tr>
+<tr><td><code>AssistantResponse</code></td><td>Agent sends a response</td></tr>
+<tr><td rowspan="2"><strong>Tools</strong></td><td><code>ToolCall</code></td><td>Agent invokes a tool</td></tr>
+<tr><td><code>ToolResult</code></td><td>Tool execution completes</td></tr>
+<tr><td><strong>Thinking</strong></td><td><code>ThinkingStart</code></td><td>Agent begins reasoning</td></tr>
+<tr><td rowspan="2"><strong>Tasks</strong></td><td><code>TaskStart</code></td><td>Agent begins a task</td></tr>
+<tr><td><code>TaskEnd</code></td><td>Task completes (with status)</td></tr>
+<tr><td><strong>Errors</strong></td><td><code>Error</code></td><td>Error occurs during processing</td></tr>
+<tr><td rowspan="2"><strong>Sub-Agents</strong></td><td><code>SubAgentSpawn</code></td><td>Sub-agent is spawned</td></tr>
+<tr><td><code>SubAgentComplete</code></td><td>Sub-agent finishes</td></tr>
+<tr><td rowspan="3"><strong>Approvals</strong></td><td><code>ApprovalRequested</code></td><td>Command approval request sent</td></tr>
+<tr><td><code>ApprovalGranted</code></td><td>User approved a command</td></tr>
+<tr><td><code>ApprovalDenied</code></td><td>User denied a command</td></tr>
+</tbody>
+</table>
+
+<h2>Event Structure</h2>
+${codeBlock(`struct Event {
+    id: i64,              // Auto-incrementing ID
+    session_id: String,   // Session identifier
+    event_type: EventType,// One of the 16 types above
+    data: JsonValue,      // Event-specific payload
+    created_at: DateTime, // Timestamp
+    consolidated_at: Option<DateTime>, // When processed
+    task_id: Option<String>,   // Associated plan task
+    tool_name: Option<String>, // For tool events
+}`, 'rust')}
+
+<h2>Daily Consolidation</h2>
+<p>A background task runs at <strong>3:00 AM UTC</strong> daily and processes unconsolidated events:</p>
+<ol>
+  <li><strong>Fact extraction</strong> &mdash; the LLM analyzes event sequences to extract durable facts</li>
+  <li><strong>Procedure learning</strong> &mdash; repeated tool-call patterns are captured as procedures</li>
+  <li><strong>Error solution tracking</strong> &mdash; errors and their resolutions are paired for future debugging</li>
+</ol>
+<p>After processing, events are marked with a <code>consolidated_at</code> timestamp.</p>
+
+<h2>Session Context</h2>
+<p>The event system provides a session summary for LLM context that includes tools used, errors encountered, approvals granted/denied, and sub-agent activity.</p>
+
+<h2>Event Pruning</h2>
+<p>A background task runs at <strong>3:30 AM UTC</strong> and removes events older than the retention period (default 30 days).</p>
+
+${callout('info', 'Immutability', 'Events are append-only. The <code>consolidated_at</code> field is the only field ever updated after creation.')}
+`
+  },
+  {
+    slug: '/plans',
+    section: 'Plans',
+    title: 'Task Plans',
+    content: () => `
+<h1>Task Plans</h1>
+<p class="lead">Persistent multi-step plans that survive crashes and enable complex task execution with progress tracking.</p>
+
+<h2>Plan Lifecycle</h2>
+<ol>
+  <li><strong>Detection</strong> &mdash; the agent analyzes incoming messages for multi-step task indicators</li>
+  <li><strong>Generation</strong> &mdash; the LLM generates a structured plan with discrete steps</li>
+  <li><strong>Execution</strong> &mdash; steps are executed sequentially with progress tracking</li>
+  <li><strong>Recovery</strong> &mdash; on restart, paused plans are detected and resumed</li>
+</ol>
+
+<h2>Plan Structure</h2>
+${codeBlock(`struct TaskPlan {
+    id: String,              // UUID
+    session_id: String,      // Owning session
+    description: String,     // Plan summary
+    trigger_message: String, // Original user request
+    steps: Vec<PlanStep>,    // Ordered steps
+    current_step: usize,     // Progress index
+    status: PlanStatus,      // Current state
+    checkpoint: JsonValue,   // Intermediate results
+}`, 'rust')}
+
+<h2>Plan Status</h2>
+<table class="config-table">
+<thead><tr><th>Status</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Planning</code></td><td>LLM is generating steps</td></tr>
+<tr><td><code>InProgress</code></td><td>Actively executing steps</td></tr>
+<tr><td><code>Paused</code></td><td>Session ended, waiting, or interrupted</td></tr>
+<tr><td><code>Completed</code></td><td>All steps completed successfully</td></tr>
+<tr><td><code>Failed</code></td><td>Unrecoverable failure</td></tr>
+<tr><td><code>Abandoned</code></td><td>User explicitly cancelled</td></tr>
+</tbody>
+</table>
+
+<h2>Step Status</h2>
+<table class="config-table">
+<thead><tr><th>Status</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>Pending</code></td><td>Not yet started</td></tr>
+<tr><td><code>InProgress</code></td><td>Currently executing</td></tr>
+<tr><td><code>Completed</code></td><td>Completed successfully</td></tr>
+<tr><td><code>Failed</code></td><td>Failed (may retry)</td></tr>
+<tr><td><code>Skipped</code></td><td>Dependency failed or user skipped</td></tr>
+</tbody>
+</table>
+
+<h2>Crash Recovery</h2>
+<p>Plans are persisted to SQLite with checkpoints. On restart, in-progress plans resume from the last completed step. A background task at <strong>3:35 AM UTC</strong> marks orphaned plans as paused.</p>
+
+${callout('info', 'Checkpoint Data', 'Each step stores intermediate results in the plan checkpoint, allowing later steps to reference earlier outputs without re-execution.')}
+`
+  },
+  {
+    slug: '/health-monitoring',
+    section: 'Health Monitoring',
+    title: 'Service Probes',
+    content: () => `
+<h1>Health Monitoring</h1>
+<p class="lead">Define health probes for your services and get alerted when something breaks.</p>
+
+<h2>Probe Types</h2>
+<table class="config-table">
+<thead><tr><th>Type</th><th>Target Format</th><th>What It Checks</th></tr></thead>
+<tbody>
+<tr><td><code>http</code></td><td>URL</td><td>HTTP status code, response body, latency</td></tr>
+<tr><td><code>port</code></td><td>host:port</td><td>TCP connectivity</td></tr>
+<tr><td><code>command</code></td><td>Shell command</td><td>Exit code matches expected (default: 0)</td></tr>
+<tr><td><code>file</code></td><td>File path</td><td>File exists and is not older than max_age_secs</td></tr>
+</tbody>
+</table>
+
+<h2>Configuration</h2>
+${codeBlock(`[health]
+enabled = true
+tick_interval_secs = 30
+result_retention_days = 7
+
+[[health.probes]]
+name = "API Server"
+probe_type = "http"
+target = "https://api.example.com/health"
+schedule = "every 5m"
+consecutive_failures_alert = 3
+latency_threshold_ms = 2000
+alert_session_ids = ["123456789"]
+
+[[health.probes]]
+name = "Database"
+probe_type = "port"
+target = "localhost:5432"
+schedule = "every 1m"`, 'toml', 'config.toml')}
+
+<h2>HTTP Probe Options</h2>
+${configTable([
+  ['timeout_secs', 'integer', '10', 'Request timeout in seconds'],
+  ['expected_status', 'integer', '200', 'Expected HTTP status code'],
+  ['expected_body', 'string', 'null', 'Expected substring in response body'],
+  ['method', 'string', '"GET"', 'HTTP method'],
+  ['headers', 'object', '{}', 'Custom HTTP headers'],
+])}
+
+<h2>Alerting</h2>
+<p>When a probe fails <code>consecutive_failures_alert</code> times in a row, an alert is sent to all session IDs in <code>alert_session_ids</code>.</p>
+
+<h2>Background Tasks</h2>
+<ul>
+  <li><strong>Tick loop</strong> &mdash; runs every <code>tick_interval_secs</code> (default 30), executes due probes</li>
+  <li><strong>Cleanup</strong> &mdash; runs at <strong>3:40 AM UTC</strong>, removes old results</li>
+</ul>
+
+${callout('info', 'Dynamic Probes', 'Probes can also be created at runtime by the agent via the <code>health_probe</code> tool.')}
+`
+  },
+  {
+    slug: '/updates',
+    section: 'Updates',
+    title: 'Self-Updater',
+    content: () => `
+<h1>Self-Updater</h1>
+<p class="lead">aidaemon can check for new releases on GitHub and update itself automatically.</p>
+
+<h2>Update Modes</h2>
+<table class="config-table">
+<thead><tr><th>Mode</th><th>Behavior</th></tr></thead>
+<tbody>
+<tr><td><code>enable</code></td><td>Automatically download and apply updates, then restart</td></tr>
+<tr><td><code>check_only</code> (default)</td><td>Notify and wait for approval before applying</td></tr>
+<tr><td><code>disable</code></td><td>No update checks</td></tr>
+</tbody>
+</table>
+
+<h2>Configuration</h2>
+${codeBlock(`[updates]
+mode = "check_only"
+check_interval_hours = 24
+check_at_utc_hour = 6
+confirmation_timeout_mins = 60`, 'toml', 'config.toml')}
+
+${configTable([
+  ['mode', 'string', '"check_only"', 'Update mode: enable, check_only, or disable'],
+  ['check_interval_hours', 'integer', '24', 'Hours between update checks'],
+  ['check_at_utc_hour', 'integer', 'null', 'Specific UTC hour (0-23) for daily check'],
+  ['confirmation_timeout_mins', 'integer', '60', 'Minutes to wait for user approval'],
+])}
+
+<h2>Update Process</h2>
+<ol>
+  <li><strong>Check</strong> &mdash; queries GitHub Releases API</li>
+  <li><strong>Compare</strong> &mdash; semver comparison</li>
+  <li><strong>Notify</strong> &mdash; sends release notes to channels</li>
+  <li><strong>Approve</strong> (check_only) &mdash; approval request with timeout</li>
+  <li><strong>Download</strong> &mdash; platform-specific binary</li>
+  <li><strong>Replace</strong> &mdash; overwrites current binary</li>
+  <li><strong>Restart</strong> &mdash; exits with code 75 to trigger service restart</li>
+</ol>
+
+<h2>Platform Support</h2>
+<table class="config-table">
+<thead><tr><th>Platform</th><th>Architecture</th></tr></thead>
+<tbody>
+<tr><td>Linux</td><td>x86_64, aarch64</td></tr>
+<tr><td>macOS</td><td>x86_64, aarch64</td></tr>
+</tbody>
+</table>
+
+${callout('warn', 'Homebrew Users', 'If installed via Homebrew, use <code>brew upgrade aidaemon</code> instead, or set <code>mode = "disable"</code>.')}
 `
   },
 ];
