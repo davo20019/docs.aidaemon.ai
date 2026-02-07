@@ -154,25 +154,28 @@ Health ───> GET /health (axum)`, 'text', 'architecture')}
 <h2>One-line Install (Recommended)</h2>
 <p>Works on any Linux VPS or macOS machine. Downloads the latest binary and verifies its SHA256 checksum:</p>
 ${codeBlock(`curl -sSfL https://get.aidaemon.ai | bash`, 'bash')}
+${callout('success', 'Batteries Included', 'Pre-built binaries include all channel integrations (Telegram, Slack, Discord) and the browser tool. Just enable what you need in <code>config.toml</code> &mdash; no compilation required.')}
 
 <h2>Install via Homebrew</h2>
 <p>The easiest way to install on macOS or Linux:</p>
 ${codeBlock(`brew install davo20019/tap/aidaemon`, 'bash')}
 
 <h2>Install via Cargo</h2>
-${codeBlock(`cargo install aidaemon
+<p>For Rust developers. Note: <code>cargo install</code> builds from source with default features only (Telegram). To include all channels, add feature flags:</p>
+${codeBlock(`cargo install aidaemon --features "browser,slack,discord"
 # Or for pre-built binaries:
 cargo binstall aidaemon`, 'bash')}
 
 <h2>Clone &amp; Build from Source</h2>
+<p>For contributors and developers:</p>
 ${codeBlock(`git clone https://github.com/davo20019/aidaemon.git
 cd aidaemon
-cargo build --release`, 'bash')}
+cargo build --release --features "browser,slack,discord"`, 'bash')}
 
 <p>The compiled binary will be at <code>./target/release/aidaemon</code>.</p>
 
-<h2>Optional Feature Flags</h2>
-<p>aidaemon supports optional features that can be enabled at compile time:</p>
+<h2>Feature Flags (Build from Source Only)</h2>
+<p>If you installed via the one-line script or Homebrew, all features are already included. These flags are only relevant when building from source:</p>
 
 <h3>Browser</h3>
 <p>Enable headless Chrome automation:</p>
@@ -183,9 +186,13 @@ ${callout('info', 'Note', 'The browser feature requires a Chromium-based browser
 <p>Enable the Slack channel integration (Socket Mode):</p>
 ${codeBlock(`cargo build --release --features slack`, 'bash')}
 
+<h3>Discord</h3>
+<p>Enable the Discord bot integration:</p>
+${codeBlock(`cargo build --release --features discord`, 'bash')}
+
 <h3>Multiple Features</h3>
 <p>Combine features as needed:</p>
-${codeBlock(`cargo build --release --features "browser,slack"`, 'bash')}
+${codeBlock(`cargo build --release --features "browser,slack,discord"`, 'bash')}
 
 <h2>Verify</h2>
 ${codeBlock(`./target/release/aidaemon --help`, 'bash')}
@@ -754,9 +761,9 @@ ${callout('danger', 'Untrusted Sources', 'Sessions originating from triggers (li
     description: 'Connect aidaemon to Slack via Socket Mode. Create a Slack app, configure OAuth scopes, and enable real-time messaging.',
     content: () => `
 <h1>Slack Integration</h1>
-<p class="lead">Connect aidaemon to your Slack workspace via Socket Mode for real-time messaging. Requires the <code>slack</code> feature flag at compile time.</p>
+<p class="lead">Connect aidaemon to your Slack workspace via Socket Mode for real-time messaging.</p>
 
-${callout('info', 'Feature Flag', 'Build with <code>cargo build --release --features slack</code> to enable Slack support.')}
+${callout('success', 'Pre-built Binaries', 'If you installed via the one-line script or Homebrew, Slack support is already included. Just configure <code>config.toml</code> below. The feature flag is only needed when <a href="/getting-started/build">building from source</a>.')}
 
 <h2>Create a Slack App</h2>
 <ol>
@@ -779,6 +786,7 @@ ${callout('info', 'Feature Flag', 'Build with <code>cargo build --release --feat
       <li><code>message.im</code> &mdash; direct messages</li>
     </ul>
   </li>
+  <li>Under <strong>App Home</strong>, scroll to <strong>Show Tabs</strong> and enable the <strong>Messages Tab</strong>. Check <strong>"Allow users to send Slash commands and messages from the messages tab"</strong> &mdash; without this, users cannot DM the bot.</li>
   <li>Install the app to your workspace &mdash; copy the <strong>Bot User OAuth Token</strong> (<code>xoxb-...</code>)</li>
 </ol>
 
@@ -901,9 +909,9 @@ ${callout('warn', 'Shell Operators', 'Commands containing <code>;</code> <code>|
     description: 'Connect aidaemon to Discord. Create a Discord application, configure the bot, and enable slash commands.',
     content: () => `
 <h1>Discord Bot Setup</h1>
-<p class="lead">Connect aidaemon to Discord via the gateway API. Requires the <code>discord</code> feature flag at compile time.</p>
+<p class="lead">Connect aidaemon to Discord via the gateway API.</p>
 
-${callout('info', 'Feature Flag', 'Build with <code>cargo build --release --features discord</code> to enable Discord support.')}
+${callout('success', 'Pre-built Binaries', 'If you installed via the one-line script or Homebrew, Discord support is already included. Just configure <code>config.toml</code> below. The feature flag is only needed when <a href="/getting-started/build">building from source</a>.')}
 
 <h2>Create a Discord Application</h2>
 <ol>
@@ -1327,9 +1335,9 @@ ${callout('info', 'Last Known Good', 'After every successful LLM call, the curre
     description: 'Headless Chrome automation for web browsing, form filling, and screenshots. Requires the browser feature flag.',
     content: () => `
 <h1>Browser Tool</h1>
-<p class="lead">Headless Chrome automation for web browsing, form filling, and screenshots. Requires the <code>browser</code> feature.</p>
+<p class="lead">Headless Chrome automation for web browsing, form filling, and screenshots.</p>
 
-${callout('info', 'Feature Flag', 'Build with <code>cargo build --release --features browser</code> to enable this tool.')}
+${callout('success', 'Pre-built Binaries', 'If you installed via the one-line script or Homebrew, the browser tool is already included. Just enable it in <code>config.toml</code> below. The feature flag is only needed when <a href="/getting-started/build">building from source</a>.')}
 
 <h2>Configuration</h2>
 ${codeBlock(`[browser]
