@@ -30,7 +30,7 @@ const pages = [
     title: 'aidaemon Documentation — Personal AI Agent Daemon',
     description: 'Documentation for aidaemon, an open-source personal AI agent daemon. Chat via Telegram, Slack, or Discord. Extend with MCP, use any LLM.',
     content: () => `
-<h1>aidaemon</h1>
+<h1><span class="ai">ai</span>daemon</h1>
 <p class="lead">A personal AI agent that runs as a daemon. Always on, always learning. Chat from Telegram, extend with MCP, powered by any LLM.</p>
 
 <p>aidaemon is a self-hosted AI agent written in Rust that runs as a background service on your machine. It connects to any OpenAI-compatible LLM provider, communicates via Telegram, Slack, or Discord, and can execute tools, manage its own configuration, remember facts, browse the web, and spawn sub-agents — all autonomously.</p>
@@ -62,6 +62,7 @@ const pages = [
   <li><strong>Self-updater</strong> — auto-update from GitHub releases with configurable modes</li>
   <li><strong>Discord integration</strong> — slash commands, interactive approval buttons, multi-bot support</li>
   <li><strong>Command risk assessment</strong> — 4-level risk scoring (Safe/Medium/High/Critical) for terminal commands</li>
+  <li><strong>People intelligence</strong> — a personal contact book that remembers birthdays, preferences, and relationships for you</li>
 </ul>
 
 <h2>Architecture at a Glance</h2>
@@ -79,6 +80,7 @@ Discord  ──┘         │
                      │    ├── sub-agents + CLI agents
                      │    ├── health probes
                      │    ├── manage skills
+                     │    ├── manage people
                      │    ├── scheduler
                      │    └── MCP tools (dynamic)
                      │
@@ -424,7 +426,18 @@ api_key = "keychain"    # Resolved from keychain entry "api_key"
 [telegram]
 bot_token = "keychain"  # Resolved from keychain entry "bot_token"`, 'toml')}
 
-<p>Store values with <code>aidaemon store-secret &lt;field&gt;</code> before first run.</p>
+<p>Store values with the <code>keychain</code> CLI command before first run:</p>
+${codeBlock(`# Store a secret (prompts interactively)
+aidaemon keychain set api_key
+aidaemon keychain set bot_token
+
+# Verify a stored secret (shows masked value)
+aidaemon keychain get api_key
+
+# Remove a secret
+aidaemon keychain delete api_key`, 'bash')}
+
+${callout('tip', 'Security', 'The <code>set</code> command prompts for the value interactively with confirmation, keeping secrets out of your shell history.')}
 
 <h3>Environment Variables</h3>
 <p>Use <code>\${VAR_NAME}</code> syntax anywhere in config values:</p>
@@ -434,7 +447,7 @@ api_key = "\${GOOGLE_API_KEY}"
 [telegram]
 bot_token = "\${TELEGRAM_BOT_TOKEN}"`, 'toml')}
 
-${callout('info', 'Supported Keychain Fields', 'Fields supporting <code>"keychain"</code>: <code>provider.api_key</code>, <code>telegram.bot_token</code>, <code>slack.app_token</code>, <code>slack.bot_token</code>, <code>triggers.email.password</code>, <code>state.encryption_key</code>, <code>search.api_key</code>.')}
+${callout('info', 'Supported Keychain Fields', 'Fields supporting <code>"keychain"</code>: <code>provider.api_key</code>, <code>telegram.bot_token</code>, <code>slack.app_token</code>, <code>slack.bot_token</code>, <code>discord.bot_token</code>, <code>triggers.email.password</code>, <code>state.encryption_key</code>, <code>search.api_key</code>, and <code>http_auth.*</code> profile fields.')}
 
 <h2>[health]</h2>
 <p>Health monitoring system. See <a href="/health-monitoring">Health Monitoring</a>.</p>
@@ -461,6 +474,17 @@ ${configTable([
   ['check_interval_hours', 'integer', '24', 'Hours between update checks'],
   ['check_at_utc_hour', 'integer', 'null', 'Specific UTC hour (0-23) for daily check'],
   ['confirmation_timeout_mins', 'integer', '60', 'Minutes to wait for user approval'],
+])}
+
+<h2>[people]</h2>
+<p>People Intelligence — a personal contact book managed by your assistant. See <a href="/tools/people">People Intelligence</a>.</p>
+${configTable([
+  ['enabled', 'bool', 'false', 'Initial state for people intelligence (can be toggled at runtime via chat)'],
+  ['auto_extract', 'bool', 'true', 'Automatically learn facts about people from conversations'],
+  ['auto_extract_categories', 'string[]', '["birthday", "preference", "interest", "work", "family", "important_date"]', 'Fact categories that can be auto-extracted'],
+  ['restricted_categories', 'string[]', '["health", "finance", "political", "religious"]', 'Categories that are never auto-extracted'],
+  ['fact_retention_days', 'integer', '180', 'Days before unconfirmed auto-extracted facts are pruned'],
+  ['reconnect_reminder_days', 'integer', '30', 'Days of inactivity before suggesting a reconnect'],
 ])}
 
 <h2>Example Config</h2>
@@ -539,6 +563,10 @@ name = "API Server"
 probe_type = "http"
 target = "https://api.example.com/health"
 schedule = "every 5m"
+
+# People intelligence (opt-in, can also enable via chat)
+# [people]
+# enabled = true
 
 # Self-updater
 [updates]
@@ -772,9 +800,12 @@ ${callout('success', 'Pre-built Binaries', 'If you installed via the one-line sc
   <li>Under <strong>Socket Mode</strong>, enable it and generate an <strong>App-Level Token</strong> with the <code>connections:write</code> scope &mdash; this is your <code>app_token</code> (<code>xapp-...</code>)</li>
   <li>Under <strong>OAuth &amp; Permissions</strong>, add these <strong>Bot Token Scopes</strong>:
     <ul>
+      <li><code>channels:read</code> &mdash; list members in public channels</li>
       <li><code>chat:write</code> &mdash; send messages</li>
       <li><code>files:read</code> &mdash; download files sent by users</li>
       <li><code>files:write</code> &mdash; upload files to Slack</li>
+      <li><code>groups:read</code> &mdash; list members in private channels (needed for resolving user names in private channels)</li>
+      <li><code>im:read</code> &mdash; read DM metadata (required for file transfers in direct messages)</li>
       <li><code>reactions:write</code> &mdash; add status reactions (hourglass during processing)</li>
       <li><code>users:read</code> &mdash; resolve user info</li>
     </ul>
@@ -1075,6 +1106,7 @@ ${codeBlock(`trait Tool {
 <tr><td><a href="/tools/command-risk"><code>command_risk</code></a></td><td>4-level risk assessment for terminal commands</td><td>[terminal]</td></tr>
 <tr><td><a href="/health-monitoring"><code>health_probe</code></a></td><td>Manage and run health probes</td><td>[health]</td></tr>
 <tr><td><a href="/skills"><code>manage_skills</code></a></td><td>Add, remove, browse, install dynamic skills</td><td>[skills]</td></tr>
+<tr><td><a href="/tools/people"><code>manage_people</code></a></td><td>Personal contact book with birthdays, preferences, relationships</td><td>Always registered</td></tr>
 <tr><td><a href="/mcp">MCP tools</a></td><td>Dynamically discovered via MCP servers</td><td>[mcp.*]</td></tr>
 </tbody>
 </table>
@@ -1096,6 +1128,7 @@ ${callout('info', 'Dynamic Budget', 'The agent also has a built-in <code>request
   <li>SchedulerTool (if scheduler.enabled)</li>
   <li>HealthProbeTool (if health.enabled)</li>
   <li>ManageSkillsTool</li>
+  <li>ManagePeopleTool (always registered, gated internally)</li>
   <li>MCP tools (if configured)</li>
 </ol>
 `
@@ -1580,6 +1613,121 @@ retention_hours = 24`, 'toml', 'config.toml')}
 <p>Users can send files to the bot in Telegram or Slack. aidaemon downloads them to <code>inbox_dir</code> and makes them available to the agent. Supports documents, photos, audio, video, and voice messages, up to <code>max_file_size_mb</code>.</p>
 
 ${callout('warn', 'Outbox Directories', 'The <code>outbox_dirs</code> list controls which directories the agent can send files from. Keep it as narrow as possible in production.')}
+`
+  },
+  {
+    slug: '/tools/people',
+    section: 'Tools',
+    title: 'People Intelligence',
+    description: 'A personal contact book managed by your AI assistant. Remembers birthdays, preferences, and relationships — all stored locally on your machine.',
+    content: () => `
+<h1>People Intelligence</h1>
+<p class="lead">Think of it as a contact book, but with a personal assistant who remembers the details for you. Birthdays, preferences, communication styles, how you know someone &mdash; aidaemon keeps it all organized and reminds you when it matters. Everything lives on your computer or server, never sent to third parties.</p>
+
+${callout('info', 'Runtime Toggle', 'People Intelligence can be enabled or disabled at any time via chat. Just say <strong>"enable people intelligence"</strong> or use the <code>manage_people</code> tool with action <code>enable</code>/<code>disable</code>. No restart required.')}
+
+<h2>How It Works</h2>
+<ol>
+  <li><strong>Add contacts</strong> &mdash; manually add people or let aidaemon learn about them from conversations</li>
+  <li><strong>Remember details</strong> &mdash; birthdays, preferences, interests, work info, and more</li>
+  <li><strong>Link identities</strong> &mdash; connect a person to their Telegram, Slack, or Discord identity</li>
+  <li><strong>Proactive reminders</strong> &mdash; aidaemon naturally mentions upcoming birthdays and suggests reconnections</li>
+  <li><strong>Context adaptation</strong> &mdash; when a known person messages, aidaemon adapts its communication style</li>
+</ol>
+
+<h2>Tool Name</h2>
+<p><code>manage_people</code></p>
+
+<h2>Actions</h2>
+<table class="config-table">
+<thead><tr><th>Action</th><th>Description</th><th>Required Params</th></tr></thead>
+<tbody>
+<tr><td><code>enable</code></td><td>Turn on People Intelligence (persists across restarts)</td><td>&mdash;</td></tr>
+<tr><td><code>disable</code></td><td>Turn off People Intelligence (data is preserved)</td><td>&mdash;</td></tr>
+<tr><td><code>status</code></td><td>Show enabled/disabled state and contact count</td><td>&mdash;</td></tr>
+<tr><td><code>add</code></td><td>Add a new person</td><td>name</td></tr>
+<tr><td><code>list</code></td><td>List all contacts (filter by relationship)</td><td>&mdash;</td></tr>
+<tr><td><code>view</code></td><td>View person details and all facts</td><td>name or id</td></tr>
+<tr><td><code>update</code></td><td>Update person fields (relationship, notes, style)</td><td>name or id</td></tr>
+<tr><td><code>remove</code></td><td>Delete a person and all their facts</td><td>name or id</td></tr>
+<tr><td><code>add_fact</code></td><td>Store a fact about someone (birthday, preference, etc.)</td><td>person_name, category, key, value</td></tr>
+<tr><td><code>remove_fact</code></td><td>Delete a specific fact by ID</td><td>fact_id</td></tr>
+<tr><td><code>link</code></td><td>Link a platform identity to a person</td><td>person_name, platform_id</td></tr>
+<tr><td><code>export</code></td><td>Export all data for a person as JSON</td><td>person_name</td></tr>
+<tr><td><code>purge</code></td><td>Full cascade delete (person + facts + links)</td><td>person_name</td></tr>
+<tr><td><code>audit</code></td><td>Review auto-extracted facts (unverified)</td><td>&mdash; (or person_name)</td></tr>
+<tr><td><code>confirm</code></td><td>Verify an auto-extracted fact (set confidence to 100%)</td><td>fact_id</td></tr>
+</tbody>
+</table>
+
+<h2>Parameters</h2>
+${configTable([
+  ['action', 'string', '&mdash;', 'Action to perform (required)'],
+  ['name', 'string', 'null', "Person's name (for add, view, update, remove)"],
+  ['id', 'integer', 'null', "Person's database ID (for update, remove)"],
+  ['relationship', 'string', 'null', 'Relationship type: spouse, family, friend, coworker, acquaintance'],
+  ['notes', 'string', 'null', 'Free-form notes about the person'],
+  ['communication_style', 'string', 'null', 'How to communicate: casual, formal, warm, etc.'],
+  ['language', 'string', 'null', 'Preferred language for interaction'],
+  ['person_name', 'string', 'null', "Person's name (for add_fact, link, export, purge, audit)"],
+  ['category', 'string', 'null', 'Fact category: birthday, preference, interest, work, family, important_date, personality, gift_idea'],
+  ['key', 'string', 'null', "Fact key (e.g., 'birthday', 'favorite_food')"],
+  ['value', 'string', 'null', 'Fact value'],
+  ['platform_id', 'string', 'null', "Platform-qualified ID (e.g., 'slack:U123', 'telegram:456')"],
+  ['display_name', 'string', 'null', 'Display name for the platform identity'],
+  ['fact_id', 'integer', 'null', 'Fact ID (for remove_fact, confirm)'],
+])}
+
+<h2>Enabling</h2>
+<p>There are two ways to enable People Intelligence:</p>
+
+<h3>Option 1: Via chat (recommended)</h3>
+<p>Just tell your bot to enable it. The setting is stored in the database and persists across restarts.</p>
+${codeBlock('You: "Enable people intelligence"\naidaemon: "People Intelligence enabled. I\'ll now remember contacts..."', 'text', 'chat')}
+
+<h3>Option 2: Via config.toml</h3>
+<p>Set the initial state in your config file. This value is used to seed the database on first run; after that, the runtime setting takes precedence.</p>
+${codeBlock('[people]\nenabled = true', 'toml', 'config.toml')}
+
+<h2>Organic Learning</h2>
+<p>When <code>auto_extract</code> is enabled (default), aidaemon automatically learns about people from conversations during its regular memory consolidation cycle:</p>
+<ul>
+  <li>Detects mentions of people, their preferences, birthdays, and relationships</li>
+  <li>Creates person records and stores facts with 70% confidence (auto-extracted)</li>
+  <li>Owner can review and confirm facts via the <code>audit</code> and <code>confirm</code> actions</li>
+</ul>
+
+${callout('warn', 'Restricted Categories', 'Health info, financial details, political opinions, and religious beliefs are <strong>never</strong> auto-extracted, even if mentioned in conversation. This is enforced by <code>restricted_categories</code>.')}
+
+<h2>Background Tasks</h2>
+<p>When enabled, aidaemon runs daily background checks:</p>
+<ul>
+  <li><strong>Stale fact pruning</strong> &mdash; removes unconfirmed auto-extracted facts older than <code>fact_retention_days</code> (default 180)</li>
+  <li><strong>Upcoming date reminders</strong> &mdash; detects birthdays and important dates within 14 days</li>
+  <li><strong>Reconnect suggestions</strong> &mdash; flags people who haven't been contacted in <code>reconnect_reminder_days</code> (default 30)</li>
+</ul>
+
+<h2>Privacy Model</h2>
+<table class="config-table">
+<thead><tr><th>Context</th><th>Behavior</th></tr></thead>
+<tbody>
+<tr><td>Owner DMs</td><td>Full people graph injected into system prompt (names, facts, relationships)</td></tr>
+<tr><td>Non-owner (linked)</td><td>Communication style adaptation only (no fact injection to other users)</td></tr>
+<tr><td>Public channels</td><td>No personal facts injected</td></tr>
+</tbody>
+</table>
+
+<h2>Configuration</h2>
+${codeBlock('[people]\nenabled = true\nauto_extract = true\nauto_extract_categories = ["birthday", "preference", "interest", "work", "family", "important_date"]\nrestricted_categories = ["health", "finance", "political", "religious"]\nfact_retention_days = 180\nreconnect_reminder_days = 30', 'toml', 'config.toml')}
+
+${configTable([
+  ['enabled', 'bool', 'false', 'Initial state (can be toggled at runtime via chat)'],
+  ['auto_extract', 'bool', 'true', 'Learn facts about people from conversations automatically'],
+  ['auto_extract_categories', 'string[]', '[...]', 'Categories that can be auto-extracted'],
+  ['restricted_categories', 'string[]', '[...]', 'Categories that are never auto-extracted'],
+  ['fact_retention_days', 'integer', '180', 'Days before unconfirmed facts are pruned'],
+  ['reconnect_reminder_days', 'integer', '30', 'Days of inactivity before suggesting a reconnect'],
+])}
 `
   },
   {
@@ -2286,6 +2434,8 @@ ${codeBlock(`<?xml version="1.0" encoding="UTF-8"?>
 <p>Then loads the service:</p>
 ${codeBlock(`launchctl load ~/Library/LaunchAgents/ai.aidaemon.plist`, 'bash')}
 
+${callout('warning', 'Prevent macOS Sleep', 'macOS may suspend background processes when the system sleeps. To keep aidaemon running continuously, use <code>caffeinate</code>:<br><br><code>caffeinate -s aidaemon</code><br><br>The <code>-s</code> flag prevents sleep while the process is running. You can also use <code>caffeinate -i</code> to prevent idle sleep without keeping the display on. If running as a launchd service, add <code>caffeinate -s</code> before the binary path in your plist <code>ProgramArguments</code>.')}
+
 <h2>Health Check</h2>
 <p>Once running as a service, verify with:</p>
 ${codeBlock(`curl http://127.0.0.1:8080/health
@@ -2707,6 +2857,7 @@ a:hover { color: var(--cyan); text-shadow: 0 0 8px var(--cyan-glow); }
   text-decoration: none;
 }
 .header-logo:hover { color: var(--text-primary); text-shadow: none; }
+.ai { color: var(--green); }
 
 .header-logo .tag {
   color: var(--cyan);
@@ -3297,7 +3448,7 @@ a:hover { color: var(--cyan); text-shadow: 0 0 8px var(--cyan-glow); }
 
 <header class="header">
   <a href="/" class="header-logo">
-    <span>aidaemon</span>
+    <span><span class="ai">ai</span>daemon</span>
     <span class="tag">docs</span>
   </a>
   <button class="hamburger" onclick="toggleSidebar()" aria-label="Toggle sidebar">☰</button>
@@ -3324,7 +3475,7 @@ a:hover { color: var(--cyan); text-shadow: 0 0 8px var(--cyan-glow); }
       ${renderPageNav(page.slug)}
     </div>
     <footer class="docs-footer">
-      <span>aidaemon &middot; MIT License &middot; Built with Rust &amp; Tokio</span>
+      <span><span class="ai">ai</span>daemon &middot; MIT License &middot; Built with Rust &amp; Tokio</span>
       <div>
         <a href="https://github.com/davo20019/aidaemon" target="_blank" rel="noopener">GitHub</a>
         <a href="https://github.com/davo20019/aidaemon/issues" target="_blank" rel="noopener">Issues</a>
