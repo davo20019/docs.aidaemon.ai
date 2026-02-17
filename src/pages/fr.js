@@ -645,6 +645,20 @@ fast = "llama3.1"
 smart = "llama3.1"`, 'toml')}
 
 ${callout('info', 'Découverte Ollama', 'L\'assistant de configuration découvre automatiquement les modèles Ollama disponibles en interrogeant <code>http://localhost:11434/api/tags</code>.')}
+
+<h2>llama.cpp (Local)</h2>
+<p>Vous pouvez aussi utiliser aidaemon avec <code>llama.cpp</code> via <code>llama-server</code> en mode compatible OpenAI.</p>
+${codeBlock(`[provider]
+kind = "openai_compatible"
+api_key = "llama" # N importe quelle valeur si votre serveur local n impose pas d auth
+base_url = "http://127.0.0.1:8080/v1"
+
+[provider.models]
+primary = "votre-modele-id"
+fast = "votre-modele-id"
+smart = "votre-modele-id"`, 'toml')}
+
+${callout('warn', 'Exigences llama.cpp', '<code>/v1/chat/completions</code> est obligatoire. <code>/v1/models</code> est fortement recommande pour que la commande <code>/models</code> fonctionne. Pour la securite, aidaemon autorise HTTP uniquement vers des adresses localhost.')}
 `
   },
   {
