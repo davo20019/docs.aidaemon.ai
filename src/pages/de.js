@@ -109,7 +109,7 @@ Health ───> GET /health (axum)`, 'text', 'architecture')}
   <li><strong>Rust-Toolchain</strong> — installiere über <a href="https://rustup.rs" target="_blank" rel="noopener">rustup.rs</a></li>
   <li><strong>SQLite</strong> — auf macOS/Linux normalerweise vorinstalliert</li>
   <li><strong>Telegram-Bot-Token</strong> — erstelle über <a href="https://t.me/BotFather" target="_blank" rel="noopener">@BotFather</a></li>
-  <li><strong>LLM-API-Schlüssel</strong> — von Google AI Studio, OpenAI, Anthropic, OpenRouter oder nutze lokales Ollama</li>
+  <li><strong>LLM-API-Schlüssel</strong> — von Google AI Studio, OpenAI, Anthropic, OpenRouter, Moonshot, MiniMax oder nutze lokales Ollama</li>
 </ul>
 
 <h2>Schritte</h2>
@@ -200,6 +200,8 @@ ${codeBlock(`./target/release/aidaemon --help`, 'bash')}
 <tr><td>Anthropic (Native)</td><td>Native API</td><td>claude-sonnet-4 / claude-haiku-4 / claude-opus-4</td></tr>
 <tr><td>Anthropic (OpenRouter)</td><td><code>https://openrouter.ai/api/v1</code></td><td>anthropic/claude-*-Varianten</td></tr>
 <tr><td>OpenRouter</td><td><code>https://openrouter.ai/api/v1</code></td><td>Gemischte Anbieter</td></tr>
+<tr><td>Moonshot AI (Kimi)</td><td><code>https://api.moonshot.ai/v1</code></td><td>kimi-k2.5 / kimi-k2.5 / kimi-k2-thinking</td></tr>
+<tr><td>MiniMax</td><td><code>https://api.minimax.io/v1</code></td><td>MiniMax-M2.5 / MiniMax-M2.5-highspeed / MiniMax-M2.5</td></tr>
 <tr><td>Cloudflare AI Gateway</td><td><code>https://gateway.ai.cloudflare.com/v1/&lt;ACCOUNT_ID&gt;/&lt;GATEWAY_ID&gt;/compat</code></td><td>Anbieterabhaengig (zum Beispiel: gpt-4o-mini / gpt-4o-mini / gpt-4o)</td></tr>
 <tr><td>Ollama (lokal)</td><td><code>http://localhost:11434/v1</code></td><td>Automatisch erkannt von lokaler Instanz</td></tr>
 <tr><td>Benutzerdefiniert</td><td>Benutzerdefiniert</td><td>Benutzerdefiniert</td></tr>
@@ -583,7 +585,7 @@ ${callout('info', 'Empfohlene Einrichtung', 'Google AI Studio bietet einen koste
 <p>Bei Verwendung von <code>google_genai</code> aktiviert aidaemon automatisch Google Search Grounding. Dies ermöglicht es Gemini-Modellen, das Web als Teil ihrer Antworten zu durchsuchen. Modelle, die Grounding mit Function Calling nicht unterstützen, werden automatisch erkannt und fallen graceful zurück.</p>
 
 <h3>openai_compatible</h3>
-<p>Funktioniert mit jeder API, die das OpenAI Chat Completions-Format implementiert. Dazu gehören OpenAI, OpenRouter, Cloudflare AI Gateway, Ollama und viele andere.</p>
+<p>Funktioniert mit jeder API, die das OpenAI Chat Completions-Format implementiert. Dazu gehören OpenAI, OpenRouter, Moonshot, MiniMax, Cloudflare AI Gateway, Ollama und viele andere.</p>
 ${codeBlock(`[provider]
 kind = "openai_compatible"
 api_key = "sk-..."
@@ -616,6 +618,30 @@ base_url = "https://openrouter.ai/api/v1"
 primary = "anthropic/claude-sonnet-4"
 fast = "anthropic/claude-haiku-4"
 smart = "anthropic/claude-opus-4"`, 'toml')}
+
+<h2>Moonshot AI (Kimi)</h2>
+<p>Moonshot bietet Kimi-Modelle über eine OpenAI-kompatible API an.</p>
+${codeBlock(`[provider]
+kind = "openai_compatible"
+api_key = "YOUR_MOONSHOT_API_KEY"
+base_url = "https://api.moonshot.ai/v1"
+
+[provider.models]
+primary = "kimi-k2.5"
+fast = "kimi-k2.5"
+smart = "kimi-k2-thinking"`, 'toml')}
+
+<h2>MiniMax</h2>
+<p>MiniMax bietet einen OpenAI-kompatiblen Endpoint unter <code>https://api.minimax.io/v1</code>.</p>
+${codeBlock(`[provider]
+kind = "openai_compatible"
+api_key = "YOUR_MINIMAX_API_KEY"
+base_url = "https://api.minimax.io/v1"
+
+[provider.models]
+primary = "MiniMax-M2.5"
+fast = "MiniMax-M2.5-highspeed"
+smart = "MiniMax-M2.5"`, 'toml')}
 
 <h2>Cloudflare AI Gateway</h2>
 <p>Cloudflare AI Gateway sitzt vor Upstream-Anbietern und stellt einen OpenAI-kompatiblen Endpoint bereit. Nutze das fuer zentrale Logs, Caching, Kontrollen oder Rate-Limits ueber mehrere Anbieter.</p>
