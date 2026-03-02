@@ -196,13 +196,13 @@ ${codeBlock(`./target/release/aidaemon --help`, 'bash')}
 <thead><tr><th>Provider</th><th>Base URL</th><th>Default Models</th></tr></thead>
 <tbody>
 <tr><td><strong>Google AI Studio (Native)</strong></td><td>Native API</td><td>gemini-3-flash-preview / gemini-2.5-flash-lite / gemini-3-pro-preview</td></tr>
-<tr><td>OpenAI</td><td><code>https://api.openai.com/v1</code></td><td>gpt-4o / gpt-4o-mini / gpt-4o</td></tr>
-<tr><td>Anthropic (Native)</td><td>Native API</td><td>claude-sonnet-4 / claude-haiku-4 / claude-opus-4</td></tr>
+<tr><td>OpenAI</td><td><code>https://api.openai.com/v1</code></td><td>gpt-5-mini / gpt-5-nano / gpt-5.1</td></tr>
+<tr><td>Anthropic (Native)</td><td>Native API</td><td>claude-sonnet-4-5 / claude-haiku-4-5 / claude-opus-4-6</td></tr>
 <tr><td>Anthropic (OpenRouter)</td><td><code>https://openrouter.ai/api/v1</code></td><td>anthropic/claude-* variants</td></tr>
 <tr><td>OpenRouter</td><td><code>https://openrouter.ai/api/v1</code></td><td>Mixed providers</td></tr>
-<tr><td>Moonshot AI (Kimi)</td><td><code>https://api.moonshot.ai/v1</code></td><td>kimi-k2.5 / kimi-k2.5 / kimi-k2-thinking</td></tr>
+<tr><td>Moonshot AI (Kimi)</td><td><code>https://api.moonshot.ai/v1</code></td><td>kimi-k2.5 / kimi-k2 / kimi-k2.5</td></tr>
 <tr><td>MiniMax</td><td><code>https://api.minimax.io/v1</code></td><td>MiniMax-M2.5 / MiniMax-M2.5-highspeed / MiniMax-M2.5</td></tr>
-<tr><td>Cloudflare AI Gateway</td><td><code>https://gateway.ai.cloudflare.com/v1/&lt;ACCOUNT_ID&gt;/&lt;GATEWAY_ID&gt;/compat</code></td><td>Provider-dependent (for example: gpt-4o-mini / gpt-4o-mini / gpt-4o)</td></tr>
+<tr><td>Cloudflare AI Gateway</td><td><code>https://gateway.ai.cloudflare.com/v1/&lt;ACCOUNT_ID&gt;/&lt;GATEWAY_ID&gt;/compat</code></td><td>Provider-dependent (for example: gpt-5-mini / gpt-5-nano / gpt-5.1)</td></tr>
 <tr><td>Ollama (local)</td><td><code>http://localhost:11434/v1</code></td><td>Auto-discovered from local instance</td></tr>
 <tr><td>Custom</td><td>User-specified</td><td>User-specified</td></tr>
 </tbody>
@@ -250,11 +250,12 @@ ${configTable([
 <h2>[provider.models]</h2>
 ${configTable([
   ['primary', 'string', '(provider default)', 'Default model for general queries'],
-  ['fast', 'string', '(same as primary)', 'Model for simple/quick queries'],
-  ['smart', 'string', '(same as primary)', 'Model for complex reasoning tasks'],
+  ['fast', 'string', '(same as primary)', 'Low-latency model for intent-gate/simple turns (prefer non-reasoning instruct models)'],
+  ['smart', 'string', '(same as primary)', 'Model for complex execution turns (can be the same as primary)'],
 ])}
 
-${callout('info', 'Model Defaults', 'Provider-aware defaults: <strong>google_genai</strong> → primary=gemini-3-flash-preview, fast=gemini-2.5-flash-lite, smart=gemini-3-pro-preview. <strong>openai_compatible</strong> → all tiers default to openai/gpt-4o. <strong>anthropic</strong> → all tiers default to claude-sonnet-4-20250514. When all three tiers resolve to the same model, auto-routing is disabled. See <a href="/router">Model Routing</a>.')}
+${callout('info', 'Model Defaults', 'Provider-aware defaults are filled automatically by the wizard and may change across releases as provider catalogs evolve. For production, pin explicit model IDs in <code>[provider.models]</code>. If all three tiers resolve to the same model, auto-routing is disabled. See <a href="/router">Model Routing</a>.')}
+${callout('warn', 'Fast Tier Guidance', 'Set <code>provider.models.fast</code> to a cheap non-reasoning instruction model for intent-gate and routing. Avoid reasoning/thinking models in <code>fast</code> because they usually increase token burn and latency for no routing benefit.')}
 
 <h2>[telegram]</h2>
 ${configTable([
@@ -592,9 +593,9 @@ api_key = "sk-..."
 base_url = "https://api.openai.com/v1"
 
 [provider.models]
-primary = "gpt-4o"
-fast = "gpt-4o-mini"
-smart = "o1-preview"`, 'toml')}
+primary = "gpt-5-mini"
+fast = "gpt-5-nano"
+smart = "gpt-5.1"`, 'toml')}
 
 <h3>anthropic</h3>
 <p>Native Anthropic API (Messages API format). Use this for direct Anthropic access without going through an OpenAI-compatible proxy.</p>
@@ -603,9 +604,9 @@ kind = "anthropic"
 api_key = "sk-ant-..."
 
 [provider.models]
-primary = "claude-sonnet-4-20250514"
-fast = "claude-haiku-4-20250414"
-smart = "claude-opus-4-20250414"`, 'toml')}
+primary = "claude-sonnet-4-5"
+fast = "claude-haiku-4-5"
+smart = "claude-opus-4-6"`, 'toml')}
 
 <h2>OpenRouter</h2>
 <p>OpenRouter provides access to models from multiple providers through a single API key and the OpenAI-compatible format.</p>
@@ -615,9 +616,10 @@ api_key = "sk-or-..."
 base_url = "https://openrouter.ai/api/v1"
 
 [provider.models]
-primary = "anthropic/claude-sonnet-4"
-fast = "anthropic/claude-haiku-4"
-smart = "anthropic/claude-opus-4"`, 'toml')}
+primary = "openai/gpt-5-mini"
+fast = "mistralai/mistral-small-3.1-24b-instruct"
+smart = "openai/gpt-5.1"`, 'toml')}
+${callout('info', 'OpenRouter Fast Tier Picks', 'Current fast-tier picks for intent-gate: <code>mistralai/mistral-small-3.1-24b-instruct</code>, <code>mistralai/mistral-nemo</code>, <code>google/gemma-3-12b-it</code>, and <code>openai/gpt-5-nano</code>.')}
 
 <h2>Moonshot AI (Kimi)</h2>
 <p>Moonshot provides Kimi models over an OpenAI-compatible API.</p>
@@ -629,7 +631,7 @@ base_url = "https://api.moonshot.ai/v1"
 [provider.models]
 primary = "kimi-k2.5"
 fast = "kimi-k2.5"
-smart = "kimi-k2-thinking"`, 'toml')}
+smart = "kimi-k2.5"`, 'toml')}
 
 <h2>MiniMax</h2>
 <p>MiniMax provides an OpenAI-compatible API endpoint at <code>https://api.minimax.io/v1</code>.</p>
@@ -652,9 +654,9 @@ gateway_token = "cf-gw-..." # Optional: Authenticated Gateway mode
 base_url = "https://gateway.ai.cloudflare.com/v1/<ACCOUNT_ID>/<GATEWAY_ID>/compat"
 
 [provider.models]
-primary = "gpt-4o-mini"
-fast = "gpt-4o-mini"
-smart = "gpt-4o"`, 'toml')}
+primary = "gpt-5-mini"
+fast = "gpt-5-nano"
+smart = "gpt-5.1"`, 'toml')}
 
 ${callout('info', 'Cloudflare Auth Modes', 'You can run with just <code>api_key</code> (basic mode), or add <code>gateway_token</code> to send <code>cf-aig-authorization</code> for Authenticated Gateway mode.')}
 
@@ -2197,11 +2199,19 @@ ${callout('warn', 'Trusted vs Untrusted', 'Trusted tasks run with full terminal 
 <table class="config-table">
 <thead><tr><th>Tier</th><th>Use Case</th><th>Typical Model</th></tr></thead>
 <tbody>
-<tr><td><strong>Fast</strong></td><td>Simple greetings, yes/no, short lookups</td><td>gemini-2.5-flash-lite, gpt-4o-mini, claude-haiku-4</td></tr>
-<tr><td><strong>Primary</strong></td><td>General conversation, moderate tasks</td><td>gemini-3-flash-preview, gpt-4o, claude-sonnet-4</td></tr>
-<tr><td><strong>Smart</strong></td><td>Complex reasoning, code generation, analysis</td><td>gemini-3-pro-preview, o1-preview, claude-opus-4</td></tr>
+<tr><td><strong>Fast</strong></td><td>Intent-gate, greetings, yes/no, short lookups</td><td>mistral-small-3.1-24b-instruct, mistral-nemo, gpt-5-nano</td></tr>
+<tr><td><strong>Primary</strong></td><td>General conversation and most tool-enabled tasks</td><td>gpt-5-mini, claude-sonnet-4.5, gemini-3-flash-preview</td></tr>
+<tr><td><strong>Smart</strong></td><td>High-stakes or long-form complex execution</td><td>gpt-5.1, claude-opus-4.6, gemini-3-pro-preview</td></tr>
 </tbody>
 </table>
+
+<h2>Fast Tier Model Guidance</h2>
+<p>Use a cheap, low-latency, non-reasoning instruct model for <code>provider.models.fast</code>. The fast tier is mostly an intent gate and routing pass, not deep execution.</p>
+<ul>
+  <li><strong>Good fast picks:</strong> <code>mistralai/mistral-small-3.1-24b-instruct</code>, <code>mistralai/mistral-nemo</code>, <code>google/gemma-3-12b-it</code></li>
+  <li><strong>Avoid in fast tier:</strong> heavy reasoning/thinking models that burn extra tokens on classification-only turns</li>
+  <li><strong>If unsure:</strong> start with <code>fast=mistralai/mistral-small-3.1-24b-instruct</code>, <code>primary=openai/gpt-5-mini</code>, <code>smart=openai/gpt-5.1</code></li>
+</ul>
 
 <h2>Classification Rules</h2>
 
@@ -2785,6 +2795,226 @@ ${configTable([
 </table>
 
 ${callout('warn', 'Homebrew Users', 'If installed via Homebrew, use <code>brew upgrade aidaemon</code> instead, or set <code>mode = "disable"</code>.')}
+`
+  },
+  {
+    slug: '/terminal/self-hosting',
+    section: 'Terminal',
+    title: 'Self-Hosting the Terminal Broker',
+    description: 'Deploy your own terminal broker on Cloudflare Workers for full control over the relay infrastructure between Telegram and your local machine.',
+    content: () => `
+<h1>Self-Hosting the Terminal Broker</h1>
+<p class="lead">The terminal feature lets you run CLI agents (Claude, Codex, Gemini) directly from Telegram. By default it uses the shared hosted broker at <code>terminal.aidaemon.ai</code>. Self-hosting gives you full control over the relay infrastructure.</p>
+
+<h2>Architecture</h2>
+<p>The terminal system has three components:</p>
+<ul>
+  <li><strong>aidaemon daemon</strong> (Rust) &mdash; runs on your machine, spawns PTY sessions, bridges to the broker via WebSocket</li>
+  <li><strong>Broker</strong> (Cloudflare Worker) &mdash; WebSocket relay between the Mini App and the daemon. Handles auth, rate limiting, and session management</li>
+  <li><strong>Mini App</strong> (embedded in broker) &mdash; Telegram Mini App frontend with xterm.js terminal emulator</li>
+</ul>
+
+${codeBlock(`Telegram ──> Mini App (browser) <──WSS──> Broker (CF Worker) <──WSS──> aidaemon daemon ──> local PTY
+
+                                        ┌───────────────────┐
+  ┌──────────┐    ┌──────────────────┐   │  Cloudflare        │   ┌────────────────┐   ┌───────────┐
+  │ Telegram │───>│ Mini App         │<─>│  Worker (Broker)   │<─>│ aidaemon       │──>│ local PTY │
+  │          │    │ (xterm.js)       │   │  - auth            │   │ (terminal      │   │ (bash,    │
+  │          │    │                  │   │  - rate limiting   │   │  bridge)       │   │  zsh...)  │
+  └──────────┘    └──────────────────┘   │  - session mgmt   │   └────────────────┘   └───────────┘
+                         WSS             └───────────────────┘          WSS`, 'text', 'architecture')}
+
+${callout('info', 'End-to-End Encryption', 'The broker is a transparent relay &mdash; it never sees the actual terminal content. All terminal I/O is encrypted between the Mini App and your daemon.')}
+
+<h2>Prerequisites</h2>
+<ul>
+  <li><strong>Cloudflare account</strong> &mdash; free tier is sufficient for personal use</li>
+  <li><strong>A Telegram bot</strong> &mdash; created via <a href="https://t.me/BotFather" target="_blank" rel="noopener">@BotFather</a></li>
+  <li><strong>aidaemon installed and running</strong> &mdash; with the Telegram channel configured (<a href="/telegram">Telegram setup guide</a>)</li>
+  <li><strong>Node.js 18+</strong> and <strong>npm</strong> &mdash; for the <a href="https://developers.cloudflare.com/workers/wrangler/" target="_blank" rel="noopener">wrangler CLI</a></li>
+</ul>
+
+<h2>Step 1 &mdash; Clone the Broker</h2>
+<p>The broker is a standalone Cloudflare Worker project. Clone it and install dependencies:</p>
+${codeBlock(`git clone https://github.com/davo20019/terminal.aidaemon.ai.git
+cd terminal.aidaemon.ai
+npm install`, 'bash')}
+
+<h2>Step 2 &mdash; Configure Deployment</h2>
+<p>Open <code>wrangler.toml</code> and choose how you want to deploy:</p>
+
+<h3>Option A: workers.dev Subdomain (Simplest)</h3>
+<p>If you don't have a custom domain, use Cloudflare's free <code>*.workers.dev</code> subdomain. Comment out or remove the <code>routes</code> block:</p>
+${codeBlock(`name = "terminal-broker"
+main = "src/index.js"
+compatibility_date = "2024-12-05"
+compatibility_flags = ["nodejs_compat"]
+
+# No routes block = uses your-name.workers.dev
+# Your broker URL will be: https://terminal-broker.<your-subdomain>.workers.dev
+
+[durable_objects]
+bindings = [
+  { name = "TERMINAL_SESSION", class_name = "TerminalSession" }
+]
+
+[[migrations]]
+tag = "v1"
+new_classes = ["TerminalSession"]`, 'toml', 'wrangler.toml (workers.dev)')}
+
+<h3>Option B: Custom Domain</h3>
+<p>If you have a domain on Cloudflare DNS, set up a route to it:</p>
+${codeBlock(`name = "terminal-broker"
+main = "src/index.js"
+compatibility_date = "2024-12-05"
+compatibility_flags = ["nodejs_compat"]
+
+routes = [
+  { pattern = "terminal.yourdomain.com", zone_name = "yourdomain.com" }
+]
+
+[durable_objects]
+bindings = [
+  { name = "TERMINAL_SESSION", class_name = "TerminalSession" }
+]
+
+[[migrations]]
+tag = "v1"
+new_classes = ["TerminalSession"]`, 'toml', 'wrangler.toml (custom domain)')}
+
+${callout('info', 'Cloudflare DNS Required', 'Custom domains must be managed by Cloudflare DNS (orange-cloud proxied). If your domain is on another registrar, you can either transfer it or add it as a <a href="https://developers.cloudflare.com/dns/zone-setups/" target="_blank" rel="noopener">Cloudflare zone</a>.')}
+
+<h2>Step 3 &mdash; Set Secrets</h2>
+<p>The broker needs a few secrets to operate. Set them using the wrangler CLI:</p>
+
+${codeBlock(`# Required: signs all authentication tokens
+npx wrangler secret put SESSION_SIGNING_KEY
+# paste output of: openssl rand -base64 32
+
+# Required: validates Telegram user identity
+npx wrangler secret put TELEGRAM_BOT_TOKEN
+# paste your bot token from @BotFather
+
+# Optional: protects admin API endpoints
+npx wrangler secret put ADMIN_API_KEY
+# paste a strong random string`, 'bash')}
+
+${callout('danger', 'Protect Your Signing Key', 'The <code>SESSION_SIGNING_KEY</code> signs all authentication tokens. If it is compromised, an attacker could forge sessions. Generate a strong random value and store it securely. Rotate it immediately if you suspect a leak.')}
+
+<p>Full list of available secrets:</p>
+${configTable([
+  ['SESSION_SIGNING_KEY', 'string', '&mdash;', 'Required. Signs auth tokens. Generate with <code>openssl rand -base64 32</code>'],
+  ['TELEGRAM_BOT_TOKEN', 'string', '&mdash;', 'Required. Bot token from @BotFather. Must match the token in your aidaemon config'],
+  ['ADMIN_API_KEY', 'string', '&mdash;', 'Optional. Protects admin endpoints (user management, quota overrides)'],
+  ['BILLING_WEBHOOK_SECRET', 'string', '&mdash;', 'Optional. HMAC secret for billing webhook signature verification'],
+])}
+
+<h2>Step 4 &mdash; Deploy</h2>
+<p>Deploy the broker to Cloudflare Workers:</p>
+${codeBlock(`npx wrangler deploy`, 'bash')}
+
+<p>You should see output like this:</p>
+${codeBlock(`Uploaded terminal-broker (3.45 sec)
+Published terminal-broker (0.35 sec)
+  https://terminal-broker.your-subdomain.workers.dev
+Current Deployment ID: abc12345-...`, 'text', 'deploy output')}
+
+${callout('info', 'Durable Object Migration', 'The first deploy automatically creates the Durable Object migration for <code>TerminalSession</code>. No manual migration steps are needed.')}
+
+<h2>Step 5 &mdash; Configure aidaemon</h2>
+<p>Point your aidaemon daemon at your self-hosted broker. Update your <code>config.toml</code>:</p>
+
+${codeBlock(`[terminal]
+web_app_url = "https://your-broker.your-domain.com"
+daemon_ws_url = "wss://your-broker.your-domain.com/v1/ws/daemon"`, 'toml', 'config.toml')}
+
+<p>Or use environment variables:</p>
+${codeBlock(`export AIDAEMON_TERMINAL_WEB_APP_URL="https://your-broker.your-domain.com"
+export AIDAEMON_TERMINAL_BROKER_URL="wss://your-broker.your-domain.com/v1/ws/daemon"`, 'bash')}
+
+<p>Restart aidaemon after changing the configuration for the new values to take effect.</p>
+
+<h2>Step 6 &mdash; Configure Telegram</h2>
+<p>How you configure Telegram depends on how you launch the terminal:</p>
+
+<h3>Via /terminal Command (Inline Buttons)</h3>
+<p>If you use the <code>/terminal</code> command in your bot chat, the Mini App URL comes from <code>web_app_url</code> in your <code>config.toml</code>. No BotFather changes are needed &mdash; the inline button URL is set by aidaemon automatically.</p>
+
+<h3>Via Menu Button</h3>
+<p>If you want the terminal accessible as a permanent menu button in your bot:</p>
+<ol>
+  <li>Open <a href="https://t.me/BotFather" target="_blank" rel="noopener">@BotFather</a> on Telegram</li>
+  <li>Send <code>/mybots</code> and select your bot</li>
+  <li>Go to <strong>Bot Settings</strong> &rarr; <strong>Menu Button</strong></li>
+  <li>Set the URL to your broker (e.g. <code>https://terminal-broker.your-subdomain.workers.dev</code>)</li>
+</ol>
+
+${callout('warn', 'HTTPS Required', 'Telegram requires the Mini App URL to use HTTPS. Both <code>workers.dev</code> subdomains and Cloudflare-proxied custom domains provide HTTPS automatically.')}
+
+<h2>Verification</h2>
+<p>Confirm everything is working:</p>
+
+<h3>1. Health Check</h3>
+${codeBlock(`curl https://your-broker.your-domain.com/health`, 'bash')}
+<p>Expected response:</p>
+${codeBlock(`{
+  "ok": true,
+  "service": "your-broker.your-domain.com",
+  "version": "1.0.0",
+  "timestamp": "2026-03-01T12:00:00.000Z"
+}`, 'json', 'health response')}
+
+<h3>2. Test the Mini App</h3>
+<p>Send <code>/terminal</code> to your bot in Telegram. The Mini App should open and display the terminal interface.</p>
+
+<h3>3. Check aidaemon Logs</h3>
+<p>Look for the terminal bridge connection in your aidaemon logs:</p>
+${codeBlock(`[INFO] Connecting terminal bridge to broker: wss://your-broker.your-domain.com/v1/ws/daemon`, 'text', 'aidaemon logs')}
+
+${callout('success', 'All Set', 'If the health check returns <code>"ok": true</code>, the Mini App opens in Telegram, and aidaemon logs show the broker connection &mdash; your self-hosted terminal is fully operational.')}
+
+<h2>Quota Configuration</h2>
+<p>The broker enforces per-user monthly quotas to prevent abuse. It tracks session starts, active minutes, bytes transferred, and WebSocket frames. The default "free" plan limits are generous and more than sufficient for personal use.</p>
+
+<p>To customize the plan limits, set the <code>PLAN_LIMITS_JSON</code> environment variable in your <code>wrangler.toml</code>:</p>
+${codeBlock(`[vars]
+PLAN_LIMITS_JSON = '{"free":{"maxSessionsPerMonth":500,"maxMinutesPerMonth":3000,"maxBytesPerMonth":536870912,"maxFramesPerMonth":500000}}'`, 'toml', 'wrangler.toml')}
+
+<p>To set a specific user to the "pro" plan (or any custom plan), use the admin API:</p>
+${codeBlock(`curl -X POST https://your-broker.your-domain.com/admin/users/TELEGRAM_USER_ID/plan \\
+  -H "Authorization: Bearer YOUR_ADMIN_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{"plan": "pro"}'`, 'bash')}
+
+<p>Available plan limit keys:</p>
+${configTable([
+  ['maxSessionsPerMonth', 'integer', '100', 'Maximum terminal sessions a user can start per month'],
+  ['maxMinutesPerMonth', 'integer', '600', 'Maximum active terminal minutes per month'],
+  ['maxBytesPerMonth', 'integer', '104857600', 'Maximum bytes transferred per month (default ~100 MB)'],
+  ['maxFramesPerMonth', 'integer', '100000', 'Maximum WebSocket frames per month'],
+])}
+
+<h2>Troubleshooting</h2>
+<table class="config-table">
+<thead><tr><th>Symptom</th><th>Cause</th><th>Fix</th></tr></thead>
+<tbody>
+<tr><td>"Terminal bridge disabled" in aidaemon logs</td><td><code>daemon_ws_url</code> is misconfigured</td><td>Must use <code>wss://</code> (not <code>ws://</code>). Cloudflare Workers require TLS.</td></tr>
+<tr><td>Mini App shows "invalid session"</td><td>Token mismatch</td><td><code>TELEGRAM_BOT_TOKEN</code> in the broker must exactly match the bot token in your aidaemon <code>config.toml</code></td></tr>
+<tr><td>"Token signature mismatch"</td><td>Missing or wrong signing key</td><td>Ensure <code>SESSION_SIGNING_KEY</code> is set via <code>npx wrangler secret put</code></td></tr>
+<tr><td>WebSocket connection drops</td><td>Worker error or timeout</td><td>Check the Cloudflare dashboard &rarr; Workers &amp; Pages &rarr; your worker &rarr; Logs for errors</td></tr>
+<tr><td>"daemon_auth_rate_limited"</td><td>Too many failed connection attempts</td><td>Wait 60 seconds, then fix the underlying auth issue and reconnect</td></tr>
+</tbody>
+</table>
+
+<h2>Security Notes</h2>
+<ul>
+  <li>The broker is a <strong>transparent relay</strong> &mdash; terminal content is end-to-end encrypted between the Mini App and your daemon</li>
+  <li>The broker sees: user IDs, session metadata, and encrypted frame sizes &mdash; but <strong>never</strong> the actual terminal content</li>
+  <li>The <code>SESSION_SIGNING_KEY</code> is the most critical secret &mdash; rotate it immediately if compromised</li>
+  <li>All connections use TLS (WSS) &mdash; Cloudflare Workers enforce HTTPS by default</li>
+</ul>
+
+${callout('info', 'Full Threat Model', 'For a detailed security analysis, see the <a href="https://github.com/davo20019/terminal.aidaemon.ai/blob/main/SECURITY.md" target="_blank" rel="noopener">SECURITY.md</a> in the broker repository.')}
 `
   },
 ];

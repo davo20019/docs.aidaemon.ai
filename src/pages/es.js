@@ -196,13 +196,13 @@ ${codeBlock(`./target/release/aidaemon --help`, 'bash')}
 <thead><tr><th>Proveedor</th><th>URL Base</th><th>Modelos por Defecto</th></tr></thead>
 <tbody>
 <tr><td><strong>Google AI Studio (Nativo)</strong></td><td>API Nativa</td><td>gemini-3-flash-preview / gemini-2.5-flash-lite / gemini-3-pro-preview</td></tr>
-<tr><td>OpenAI</td><td><code>https://api.openai.com/v1</code></td><td>gpt-4o / gpt-4o-mini / gpt-4o</td></tr>
-<tr><td>Anthropic (Nativo)</td><td>API Nativa</td><td>claude-sonnet-4 / claude-haiku-4 / claude-opus-4</td></tr>
+<tr><td>OpenAI</td><td><code>https://api.openai.com/v1</code></td><td>gpt-5-mini / gpt-5-nano / gpt-5.1</td></tr>
+<tr><td>Anthropic (Nativo)</td><td>API Nativa</td><td>claude-sonnet-4-5 / claude-haiku-4-5 / claude-opus-4-6</td></tr>
 <tr><td>Anthropic (OpenRouter)</td><td><code>https://openrouter.ai/api/v1</code></td><td>anthropic/claude-* variantes</td></tr>
 <tr><td>OpenRouter</td><td><code>https://openrouter.ai/api/v1</code></td><td>Proveedores mixtos</td></tr>
-<tr><td>Moonshot AI (Kimi)</td><td><code>https://api.moonshot.ai/v1</code></td><td>kimi-k2.5 / kimi-k2.5 / kimi-k2-thinking</td></tr>
+<tr><td>Moonshot AI (Kimi)</td><td><code>https://api.moonshot.ai/v1</code></td><td>kimi-k2.5 / kimi-k2 / kimi-k2.5</td></tr>
 <tr><td>MiniMax</td><td><code>https://api.minimax.io/v1</code></td><td>MiniMax-M2.5 / MiniMax-M2.5-highspeed / MiniMax-M2.5</td></tr>
-<tr><td>Cloudflare AI Gateway</td><td><code>https://gateway.ai.cloudflare.com/v1/&lt;ACCOUNT_ID&gt;/&lt;GATEWAY_ID&gt;/compat</code></td><td>Depende del proveedor (por ejemplo: gpt-4o-mini / gpt-4o-mini / gpt-4o)</td></tr>
+<tr><td>Cloudflare AI Gateway</td><td><code>https://gateway.ai.cloudflare.com/v1/&lt;ACCOUNT_ID&gt;/&lt;GATEWAY_ID&gt;/compat</code></td><td>Depende del proveedor (por ejemplo: gpt-5-mini / gpt-5-nano / gpt-5.1)</td></tr>
 <tr><td>Ollama (local)</td><td><code>http://localhost:11434/v1</code></td><td>Auto-descubiertos desde la instancia local</td></tr>
 <tr><td>Personalizado</td><td>Especificado por el usuario</td><td>Especificado por el usuario</td></tr>
 </tbody>
@@ -254,7 +254,7 @@ ${configTable([
   ['smart', 'string', '(same as primary)', 'Modelo para tareas de razonamiento complejo'],
 ])}
 
-${callout('info', 'Valores por Defecto de Modelos', 'Valores por defecto segun el proveedor: <strong>google_genai</strong> → primary=gemini-3-flash-preview, fast=gemini-2.5-flash-lite, smart=gemini-3-pro-preview. <strong>openai_compatible</strong> → todos los niveles por defecto a openai/gpt-4o. <strong>anthropic</strong> → todos los niveles por defecto a claude-sonnet-4-20250514. Cuando los tres niveles se resuelven al mismo modelo, el enrutamiento automatico se desactiva. Ver <a href="/router">Enrutamiento de Modelos</a>.')}
+${callout('info', 'Valores por Defecto de Modelos', 'Valores por defecto segun el proveedor: <strong>google_genai</strong> → primary=gemini-3-flash-preview, fast=gemini-2.5-flash-lite, smart=gemini-3-pro-preview. <strong>openai_compatible</strong> → todos los niveles por defecto a openai/gpt-5-mini. <strong>anthropic</strong> → todos los niveles por defecto a claude-sonnet-4-5. Cuando los tres niveles se resuelven al mismo modelo, el enrutamiento automatico se desactiva. Ver <a href="/router">Enrutamiento de Modelos</a>.')}
 
 <h2>[telegram]</h2>
 ${configTable([
@@ -592,9 +592,9 @@ api_key = "sk-..."
 base_url = "https://api.openai.com/v1"
 
 [provider.models]
-primary = "gpt-4o"
-fast = "gpt-4o-mini"
-smart = "o1-preview"`, 'toml')}
+primary = "gpt-5-mini"
+fast = "gpt-5-nano"
+smart = "gpt-5.1"`, 'toml')}
 
 <h3>anthropic</h3>
 <p>API nativa de Anthropic (formato Messages API). Usa esto para acceso directo a Anthropic sin pasar por un proxy compatible con OpenAI.</p>
@@ -603,9 +603,9 @@ kind = "anthropic"
 api_key = "sk-ant-..."
 
 [provider.models]
-primary = "claude-sonnet-4-20250514"
-fast = "claude-haiku-4-20250414"
-smart = "claude-opus-4-20250414"`, 'toml')}
+primary = "claude-sonnet-4-5"
+fast = "claude-haiku-4-5"
+smart = "claude-opus-4-6"`, 'toml')}
 
 <h2>OpenRouter</h2>
 <p>OpenRouter proporciona acceso a modelos de multiples proveedores a traves de una sola clave API y el formato compatible con OpenAI.</p>
@@ -615,9 +615,9 @@ api_key = "sk-or-..."
 base_url = "https://openrouter.ai/api/v1"
 
 [provider.models]
-primary = "anthropic/claude-sonnet-4"
-fast = "anthropic/claude-haiku-4"
-smart = "anthropic/claude-opus-4"`, 'toml')}
+primary = "openai/gpt-5-mini"
+fast = "mistralai/mistral-small-3.1-24b-instruct"
+smart = "openai/gpt-5.1"`, 'toml')}
 
 <h2>Moonshot AI (Kimi)</h2>
 <p>Moonshot ofrece modelos Kimi a traves de una API compatible con OpenAI.</p>
@@ -629,7 +629,7 @@ base_url = "https://api.moonshot.ai/v1"
 [provider.models]
 primary = "kimi-k2.5"
 fast = "kimi-k2.5"
-smart = "kimi-k2-thinking"`, 'toml')}
+smart = "kimi-k2.5"`, 'toml')}
 
 <h2>MiniMax</h2>
 <p>MiniMax ofrece un endpoint compatible con OpenAI en <code>https://api.minimax.io/v1</code>.</p>
@@ -652,9 +652,9 @@ gateway_token = "cf-gw-..." # Opcional: modo Authenticated Gateway
 base_url = "https://gateway.ai.cloudflare.com/v1/<ACCOUNT_ID>/<GATEWAY_ID>/compat"
 
 [provider.models]
-primary = "gpt-4o-mini"
-fast = "gpt-4o-mini"
-smart = "gpt-4o"`, 'toml')}
+primary = "gpt-5-mini"
+fast = "gpt-5-nano"
+smart = "gpt-5.1"`, 'toml')}
 
 ${callout('info', 'Modos de Autenticacion en Cloudflare', 'Puedes operar solo con <code>api_key</code> (modo basico), o agregar <code>gateway_token</code> para enviar <code>cf-aig-authorization</code> en modo Authenticated Gateway.')}
 
@@ -2197,9 +2197,9 @@ ${callout('warn', 'Trusted vs Untrusted', 'Las tareas trusted se ejecutan con ac
 <table class="config-table">
 <thead><tr><th>Nivel</th><th>Caso de Uso</th><th>Modelo Tipico</th></tr></thead>
 <tbody>
-<tr><td><strong>Fast</strong></td><td>Saludos simples, si/no, consultas cortas</td><td>gemini-2.5-flash-lite, gpt-4o-mini, claude-haiku-4</td></tr>
-<tr><td><strong>Primary</strong></td><td>Conversacion general, tareas moderadas</td><td>gemini-3-flash-preview, gpt-4o, claude-sonnet-4</td></tr>
-<tr><td><strong>Smart</strong></td><td>Razonamiento complejo, generacion de codigo, analisis</td><td>gemini-3-pro-preview, o1-preview, claude-opus-4</td></tr>
+<tr><td><strong>Fast</strong></td><td>Saludos simples, si/no, consultas cortas</td><td>mistral-small-3.1-24b-instruct, mistral-nemo, gpt-5-nano</td></tr>
+<tr><td><strong>Primary</strong></td><td>Conversacion general, tareas moderadas</td><td>gpt-5-mini, claude-sonnet-4.5, gemini-3-flash-preview</td></tr>
+<tr><td><strong>Smart</strong></td><td>Razonamiento complejo, generacion de codigo, analisis</td><td>gemini-3-pro-preview, gpt-5.1, claude-opus-4.6</td></tr>
 </tbody>
 </table>
 
