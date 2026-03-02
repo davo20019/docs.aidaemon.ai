@@ -400,7 +400,7 @@ ${configTable([
 ])}
 
 <h2>Secrets-Verwaltung</h2>
-<p>Sensible Konfigurationswerte unterstützen neben Klartext zwei Auflösungsmethoden:</p>
+<p>Sensible Konfigurationswerte unterstützen neben Klartext zwei Auflösungsmethoden sowie einen optionalen Nur-Umgebungsmodus:</p>
 
 <h3>OS-Schlüsselbund</h3>
 <p>Setze jedes geheime Feld auf <code>"keychain"</code>, um es aus dem OS-Schlüsselbund aufzulösen (macOS Keychain, Linux secret-service):</p>
@@ -430,6 +430,18 @@ api_key = "\${GOOGLE_API_KEY}"
 
 [telegram]
 bot_token = "\${TELEGRAM_BOT_TOKEN}"`, 'toml')}
+
+<h3>Nur-Umgebungsmodus (ohne Schlüsselbund)</h3>
+<p>Wenn du den OS-Schlüsselbund nicht verwenden möchtest, setze diese Laufzeit-Umgebungsvariablen:</p>
+${codeBlock(`# Deaktiviere OS-Schlüsselbundspeicher und nutze env-dateibasierte Secrets
+export AIDAEMON_NO_KEYCHAIN=1
+
+# Optional: spezifischen Pfad zur env-Datei setzen (Standard: ./.env)
+export AIDAEMON_ENV_FILE=/absoluter/pfad/zur/.env`, 'bash')}
+
+<p>In diesem Modus liest aidaemon Secrets aus der gewählten env-Datei (oder aus Prozess-Umgebungsvariablen, wenn keine env-Datei existiert) und schreibt Secret-Updates zurück in diese env-Datei &mdash; einschließlich OAuth Access/Refresh Token Rotation.</p>
+
+${callout('warning', 'Sicherheit im Nur-Umgebungsmodus', 'Halte die env-Datei privat (<code>chmod 600</code>) und außerhalb der Versionskontrolle.')}
 
 ${callout('info', 'Unterstützte Schlüsselbund-Felder', 'Felder, die <code>"keychain"</code> unterstützen: <code>provider.api_key</code>, <code>provider.gateway_token</code>, <code>telegram.bot_token</code>, <code>slack.app_token</code>, <code>slack.bot_token</code>, <code>discord.bot_token</code>, <code>triggers.email.password</code>, <code>state.encryption_key</code>, <code>search.api_key</code> und <code>http_auth.*</code>-Profilfelder.')}
 

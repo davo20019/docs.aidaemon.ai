@@ -400,7 +400,7 @@ ${configTable([
 ])}
 
 <h2>Gerenciamento de Segredos</h2>
-<p>Valores sensíveis de configuração suportam dois métodos de resolução além de texto simples:</p>
+<p>Valores sensíveis de configuração suportam dois métodos de resolução além de texto simples, mais um modo opcional somente ambiente:</p>
 
 <h3>Chaveiro do SO</h3>
 <p>Defina qualquer campo secreto como <code>"keychain"</code> para resolvê-lo a partir do chaveiro do SO (macOS Keychain, Linux secret-service):</p>
@@ -430,6 +430,18 @@ api_key = "\${GOOGLE_API_KEY}"
 
 [telegram]
 bot_token = "\${TELEGRAM_BOT_TOKEN}"`, 'toml')}
+
+<h3>Modo somente ambiente (sem chaveiro)</h3>
+<p>Se você preferir não usar o chaveiro do SO, defina estas variáveis de ambiente em tempo de execução:</p>
+${codeBlock(`# Desativa o armazenamento no chaveiro do SO e usa segredos com base em arquivo env
+export AIDAEMON_NO_KEYCHAIN=1
+
+# Opcional: definir um caminho específico para o arquivo env (padrão: ./.env)
+export AIDAEMON_ENV_FILE=/caminho/absoluto/para/.env`, 'bash')}
+
+<p>Neste modo, o aidaemon lê segredos do arquivo env selecionado (ou de variáveis de ambiente do processo quando não existir arquivo env) e persiste atualizações de segredos nesse arquivo env &mdash; incluindo a rotação de tokens OAuth access/refresh.</p>
+
+${callout('warning', 'Segurança no modo somente ambiente', 'Mantenha o arquivo env privado (<code>chmod 600</code>) e fora do controle de versão.')}
 
 ${callout('info', 'Campos de Chaveiro Suportados', 'Campos que suportam <code>"keychain"</code>: <code>provider.api_key</code>, <code>provider.gateway_token</code>, <code>telegram.bot_token</code>, <code>slack.app_token</code>, <code>slack.bot_token</code>, <code>discord.bot_token</code>, <code>triggers.email.password</code>, <code>state.encryption_key</code>, <code>search.api_key</code> e campos de perfil <code>http_auth.*</code>.')}
 

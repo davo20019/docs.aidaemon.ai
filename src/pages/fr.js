@@ -400,7 +400,7 @@ ${configTable([
 ])}
 
 <h2>Gestion des Secrets</h2>
-<p>Les valeurs de configuration sensibles supportent deux méthodes de résolution en plus du texte brut :</p>
+<p>Les valeurs de configuration sensibles supportent deux méthodes de résolution en plus du texte brut, ainsi qu'un mode optionnel tout-environnement :</p>
 
 <h3>Trousseau du Système</h3>
 <p>Définissez n'importe quel champ secret à <code>"keychain"</code> pour le résoudre depuis le trousseau du système (Trousseau macOS, secret-service Linux) :</p>
@@ -430,6 +430,18 @@ api_key = "\${GOOGLE_API_KEY}"
 
 [telegram]
 bot_token = "\${TELEGRAM_BOT_TOKEN}"`, 'toml')}
+
+<h3>Mode tout environnement (sans trousseau)</h3>
+<p>Si vous préférez ne pas utiliser le trousseau du système, définissez ces variables d'environnement d'exécution :</p>
+${codeBlock(`# Désactive le stockage dans le trousseau système et utilise des secrets basés sur un fichier env
+export AIDAEMON_NO_KEYCHAIN=1
+
+# Optionnel : choisir un chemin de fichier env spécifique (par défaut : ./.env)
+export AIDAEMON_ENV_FILE=/chemin/absolu/vers/.env`, 'bash')}
+
+<p>Dans ce mode, aidaemon lit les secrets depuis le fichier env sélectionné (ou depuis les variables d'environnement du processus si aucun fichier env n'existe) et persiste les mises à jour de secrets dans ce fichier env &mdash; y compris la rotation des jetons OAuth access/refresh.</p>
+
+${callout('warning', 'Sécurité en mode env', 'Gardez le fichier env privé (<code>chmod 600</code>) et hors du contrôle de version.')}
 
 ${callout('info', 'Champs Supportés pour le Trousseau', 'Champs supportant <code>"keychain"</code> : <code>provider.api_key</code>, <code>provider.gateway_token</code>, <code>telegram.bot_token</code>, <code>slack.app_token</code>, <code>slack.bot_token</code>, <code>discord.bot_token</code>, <code>triggers.email.password</code>, <code>state.encryption_key</code>, <code>search.api_key</code>, et les champs de profils <code>http_auth.*</code>.')}
 

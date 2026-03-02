@@ -401,7 +401,7 @@ ${configTable([
 ])}
 
 <h2>Secrets Management</h2>
-<p>Sensitive config values support two resolution methods beyond plain text:</p>
+<p>Sensitive config values support two resolution methods beyond plain text, plus an optional env-only storage mode:</p>
 
 <h3>OS Keychain</h3>
 <p>Set any secret field to <code>"keychain"</code> to resolve it from the OS keychain (macOS Keychain, Linux secret-service):</p>
@@ -431,6 +431,18 @@ api_key = "\${GOOGLE_API_KEY}"
 
 [telegram]
 bot_token = "\${TELEGRAM_BOT_TOKEN}"`, 'toml')}
+
+<h3>Env-only Mode (No Keychain)</h3>
+<p>If you prefer not to use the OS keychain, set these runtime environment variables:</p>
+${codeBlock(`# Disable OS keychain storage and use env file-backed secrets
+export AIDAEMON_NO_KEYCHAIN=1
+
+# Optional: choose a specific env file path (default: ./.env)
+export AIDAEMON_ENV_FILE=/absolute/path/to/.env`, 'bash')}
+
+<p>In this mode, aidaemon reads secrets from the selected env file (or process environment when no env file exists) and persists secret updates back to that env file &mdash; including OAuth access/refresh token rotation.</p>
+
+${callout('warning', 'Env-only Security', 'Keep the env file private (<code>chmod 600</code>) and out of version control.')}
 
 ${callout('info', 'Supported Keychain Fields', 'Fields supporting <code>"keychain"</code>: <code>provider.api_key</code>, <code>provider.gateway_token</code>, <code>telegram.bot_token</code>, <code>slack.app_token</code>, <code>slack.bot_token</code>, <code>discord.bot_token</code>, <code>triggers.email.password</code>, <code>state.encryption_key</code>, <code>search.api_key</code>, and <code>http_auth.*</code> profile fields.')}
 
