@@ -857,6 +857,7 @@ ${renderLanguageBar(page.slug, lang)}
   <nav class="header-links">
     <a href="${homeUrl}">${ui.home}</a>
     <a href="${docsRoot}">${ui.docs}</a>
+    <a href="https://blog.aidaemon.ai" target="_blank" rel="noopener">${ui.blog}</a>
     <a href="https://github.com/davo20019/aidaemon" target="_blank" rel="noopener">${ui.github}</a>
   </nav>
 </header>
@@ -873,6 +874,7 @@ ${renderLanguageBar(page.slug, lang)}
     <footer class="docs-footer">
       <span><span class="ai">AI</span>daemon &middot; ${ui.footerText} &middot; ${ui.footerBuiltWith}</span>
       <div>
+        <a href="https://blog.aidaemon.ai" target="_blank" rel="noopener">${ui.blog}</a>
         <a href="https://github.com/davo20019/aidaemon" target="_blank" rel="noopener">GitHub</a>
         <a href="https://github.com/davo20019/aidaemon/issues" target="_blank" rel="noopener">Issues</a>
       </div>

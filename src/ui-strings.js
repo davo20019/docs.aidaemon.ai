@@ -7,6 +7,7 @@ export const uiStrings = {
     // Header
     home: 'home',
     docs: 'docs',
+    blog: 'blog',
     github: 'github',
     docsTag: 'docs',
 
@@ -61,6 +62,7 @@ export const uiStrings = {
   es: {
     home: 'inicio',
     docs: 'docs',
+    blog: 'blog',
     github: 'github',
     docsTag: 'docs',
     searchPlaceholder: 'Buscar...',
@@ -101,6 +103,7 @@ export const uiStrings = {
   de: {
     home: 'startseite',
     docs: 'docs',
+    blog: 'blog',
     github: 'github',
     docsTag: 'docs',
     searchPlaceholder: 'Suchen...',
@@ -141,6 +144,7 @@ export const uiStrings = {
   pt: {
     home: 'início',
     docs: 'docs',
+    blog: 'blog',
     github: 'github',
     docsTag: 'docs',
     searchPlaceholder: 'Pesquisar...',
@@ -181,6 +185,7 @@ export const uiStrings = {
   fr: {
     home: 'accueil',
     docs: 'docs',
+    blog: 'blog',
     github: 'github',
     docsTag: 'docs',
     searchPlaceholder: 'Rechercher...',
