@@ -1,4 +1,5 @@
 import { codeBlock, callout, configTable } from '../helpers.js';
+import sdkPages from './sdk-en.js';
 
 const pages = [
   {
@@ -3031,4 +3032,4 @@ ${callout('info', 'Full Threat Model', 'For a detailed security analysis, see th
   },
 ];
 
-export default pages;
+export default [...pages, ...sdkPages];

@@ -79,7 +79,12 @@ export default {
       if (slug === '/') slug = '/';
     }
 
-    const pages = allPages[lang];
+    // A locale without its own copy of a page serves the English one
+    // (the SDK guide is English only for now).
+    const localePages = allPages[lang];
+    const pages = localePages && lang !== 'en'
+      ? [...localePages, ...allPages.en.filter(p => !localePages.some(q => q.slug === p.slug))]
+      : localePages;
     const ui = uiStrings[lang];
 
     if (!pages || !ui) {
@@ -110,10 +115,11 @@ export default {
       });
     }
 
+    const isFallback = lang !== 'en' && !localePages.includes(page);
     return new Response(layout(page, pages, lang, ui), {
       headers: {
         'content-type': 'text/html;charset=UTF-8',
-        'content-language': lang,
+        'content-language': isFallback ? 'en' : lang,
         'cache-control': 'public, max-age=60, s-maxage=300',
       },
     });
