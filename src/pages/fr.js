@@ -4,10 +4,10 @@ const pages = [
   {
     slug: '/',
     section: null,
-    title: 'Documentation aidaemon — Agent IA Personnel en Daemon',
+    title: 'Documentation AIDaemon — Agent IA Personnel en Daemon',
     description: 'Documentation pour aidaemon, un agent IA personnel open-source fonctionnant en daemon. Discutez via Telegram, Slack ou Discord. Extensible avec MCP, compatible avec tout LLM.',
     content: () => `
-<h1><span class="ai">AI</span>daemon</h1>
+<h1><span class="ai">AI</span>Daemon</h1>
 <p class="lead">Un agent IA personnel qui fonctionne en daemon. Toujours actif, toujours en apprentissage. Discutez depuis Telegram, étendez avec MCP, propulsé par n'importe quel LLM.</p>
 
 <p>aidaemon est un agent IA auto-hébergé écrit en Rust qui fonctionne comme un service en arrière-plan sur votre machine. Il se connecte à n'importe quel fournisseur LLM compatible OpenAI, communique via Telegram, Slack ou Discord, et peut exécuter des outils, gérer sa propre configuration, mémoriser des faits, naviguer sur le web et lancer des sous-agents — le tout de manière autonome.</p>

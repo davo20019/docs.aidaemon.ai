@@ -5,11 +5,11 @@ const pages = [
   {
     slug: '/',
     section: null,
-    title: 'aidaemon Documentation — Personal AI Agent Daemon',
+    title: 'AIDaemon Documentation — Personal AI Agent Daemon',
     description: 'Documentation for aidaemon, an open-source personal AI agent daemon. Chat via Telegram, Slack, or Discord. Extend with MCP, use any LLM.',
     content: () => `
-<h1><span class="ai">AI</span>daemon</h1>
-<p class="lead">A personal AI agent that runs as a daemon. Always on, always learning. Chat from the AIdaemon app or Telegram, Slack and Discord, extend with MCP, powered by any LLM.</p>
+<h1><span class="ai">AI</span>Daemon</h1>
+<p class="lead">A personal AI agent that runs as a daemon. Always on, always learning. Chat from the AIDaemon app or Telegram, Slack and Discord, extend with MCP, powered by any LLM.</p>
 
 ${callout('success', 'New here?', 'Start with <a href="/getting-started/build">Install</a>: download the app for macOS, Windows or Linux and open it. Current version: <strong>0.21.0</strong>.')}
 
@@ -17,7 +17,7 @@ ${callout('success', 'New here?', 'Start with <a href="/getting-started/build">I
 
 <h2>Key Features</h2>
 <ul>
-  <li><strong>The AIdaemon app</strong> — one app for desktop, web and terminal: streaming replies, Read aloud, approvals, settings and usage. See <a href="/app">The AIdaemon App</a></li>
+  <li><strong>The AIDaemon app</strong> — one app for desktop, web and terminal: streaming replies, Read aloud, approvals, settings and usage. See <a href="/app">The AIDaemon App</a></li>
   <li><strong>Live views</strong> — watch the agent's browser and take over when it needs a sign-in</li>
   <li><strong>Coding agents</strong> — Claude Code, Codex, Antigravity and any Agent Client Protocol agent, in a permission mode you choose</li>
   <li><strong>Daemon architecture</strong> — runs as systemd/launchd service, always available</li>
@@ -90,7 +90,7 @@ Health ───> GET /health (axum)`, 'text', 'architecture')}
 <h2>Quick Links</h2>
 <ul>
   <li><a href="/getting-started/build">Install</a> — download the app for macOS, Windows or Linux</li>
-  <li><a href="/app">The AIdaemon App</a> — chat, approvals, live views, settings</li>
+  <li><a href="/app">The AIDaemon App</a> — chat, approvals, live views, settings</li>
   <li><a href="/configuration">Configuration Reference</a> — full config.toml documentation</li>
   <li><a href="/tools">Tools</a> — built-in and extensible tool system</li>
   <li><a href="/telegram">Telegram</a> — bot setup, commands, approval flow</li>
@@ -106,10 +106,10 @@ Health ───> GET /health (axum)`, 'text', 'architecture')}
     slug: '/getting-started',
     section: 'Getting Started',
     title: 'Overview',
-    description: 'Get AIdaemon running on your computer: download the app, open it, connect a model, and start chatting.',
+    description: 'Get AIDaemon running on your computer: download the app, open it, connect a model, and start chatting.',
     content: () => `
 <h1>Getting Started</h1>
-<p class="lead">Download the AIdaemon app, open it, connect a model, and start chatting. No terminal needed on macOS or Windows.</p>
+<p class="lead">Download the AIDaemon app, open it, connect a model, and start chatting. No terminal needed on macOS or Windows.</p>
 
 <p>The current version is <strong>0.21.0</strong>.</p>
 
@@ -133,9 +133,9 @@ Health ───> GET /health (axum)`, 'text', 'architecture')}
     slug: '/getting-started/build',
     section: 'Getting Started',
     title: 'Install',
-    description: 'Download and install AIdaemon on macOS, Windows or Linux, step by step. Advanced options: Homebrew, Cargo, building from source, servers.',
+    description: 'Download and install AIDaemon on macOS, Windows or Linux, step by step. Advanced options: Homebrew, Cargo, building from source, servers.',
     content: () => `
-<h1>Install AIdaemon</h1>
+<h1>Install AIDaemon</h1>
 <p class="lead">Pick your computer below and follow the steps. It takes a few minutes, and on macOS and Windows you never need a terminal.</p>
 
 <p>All downloads are on the <a href="https://github.com/davo20019/aidaemon/releases/latest" target="_blank" rel="noopener">latest release page</a>. The current version is <strong>0.21.0</strong>.</p>
@@ -150,15 +150,15 @@ Health ───> GET /health (axum)`, 'text', 'architecture')}
     </ul>
   </li>
   <li>Open the downloaded <code>.dmg</code> file.</li>
-  <li>Drag <strong>AIdaemon</strong> into the <strong>Applications</strong> folder.</li>
-  <li>Open AIdaemon from Applications (or Launchpad).</li>
+  <li>Drag <strong>AIDaemon</strong> into the <strong>Applications</strong> folder.</li>
+  <li>Open AIDaemon from Applications (or Launchpad).</li>
 </ol>
-${callout('info', 'If macOS blocks it the first time', 'Open <strong>System Settings &rarr; Privacy &amp; Security</strong>, scroll down to the message about AIdaemon and click <strong>Open Anyway</strong>. You only need to do this once.')}
+${callout('info', 'If macOS blocks it the first time', 'Open <strong>System Settings &rarr; Privacy &amp; Security</strong>, scroll down to the message about AIDaemon and click <strong>Open Anyway</strong>. You only need to do this once.')}
 
 <h2>Windows</h2>
 <ol>
   <li>Download <a href="https://github.com/davo20019/aidaemon/releases/latest/download/aidaemon-windows-x86_64.zip"><code>aidaemon-windows-x86_64.zip</code></a>.</li>
-  <li>Right-click the zip file and choose <strong>Extract All&hellip;</strong>. Extract it to a folder you will keep (for example <code>%LOCALAPPDATA%\\AIdaemon</code>), not your Downloads folder.</li>
+  <li>Right-click the zip file and choose <strong>Extract All&hellip;</strong>. Extract it to a folder you will keep (for example <code>%LOCALAPPDATA%\\AIDaemon</code>), not your Downloads folder.</li>
   <li>Open the extracted folder and double-click <code>aidaemon-app.exe</code>.</li>
 </ol>
 ${callout('info', 'If Windows SmartScreen warns you', 'Click <strong>More info</strong>, then <strong>Run anyway</strong>.')}
@@ -193,7 +193,7 @@ cargo build --release`, 'bash')}
 <p>The binary is at <code>./target/release/aidaemon</code>. The default features are <code>discord</code>, <code>slack</code>, <code>encryption</code>, <code>browser</code>, <code>terminal-bridge</code>, <code>otel</code> and <code>execution-docker</code>. Optional features include <code>computer_use</code> and <code>computer_use-macos</code> (operate native macOS apps) and <code>sdk-memory</code>. The app itself lives in <code>clients/app</code> and is built separately.</p>
 
 <h3>Running on a server</h3>
-<p>On a server, run <code>aidaemon</code> with no config. It prints a link and a one-time code. Reach the machine's port <code>8788</code> through an SSH tunnel or your own HTTPS tunnel, open the link on your laptop or phone, and finish setup there (the code pairs the first device only):</p>
+<p>On a server, run <code>AIDaemon</code> with no config. It prints a link and a one-time code. Reach the machine's port <code>8788</code> through an SSH tunnel or your own HTTPS tunnel, open the link on your laptop or phone, and finish setup there (the code pairs the first device only):</p>
 ${codeBlock(`# on your laptop
 ssh -L 8788:127.0.0.1:8788 you@your-server
 # then open the printed link in your browser`, 'bash')}
@@ -207,10 +207,10 @@ ssh -L 8788:127.0.0.1:8788 you@your-server
     slug: '/getting-started/wizard',
     section: 'Getting Started',
     title: 'First Run',
-    description: 'What happens the first time you open AIdaemon: the assistant starts on your computer, finds or connects a model, and opens your first conversation.',
+    description: 'What happens the first time you open AIDaemon: the assistant starts on your computer, finds or connects a model, and opens your first conversation.',
     content: () => `
 <h1>First Run</h1>
-<p class="lead">The first time you open the AIdaemon app, it starts the assistant on your computer and helps you connect a model. Nothing is saved until a test call to the model answers.</p>
+<p class="lead">The first time you open the AIDaemon app, it starts the assistant on your computer and helps you connect a model. Nothing is saved until a test call to the model answers.</p>
 
 <h2>1. Where the assistant runs</h2>
 <p>The desktop app starts the assistant (the daemon) on this computer right away, now and at every login, with no administrator password. This is <strong>Run it here</strong>, the same as <code>aidaemon service install</code>. To run it on a server instead, choose <strong>Run it on another machine instead</strong> and paste the link that server printed (see <a href="/getting-started/build">Install &rarr; Running on a server</a>).</p>
@@ -247,23 +247,23 @@ ${callout('info', 'llama.cpp and port 8080', '<code>llama-server</code> and the 
 <p>Your first conversation opens next. Its greeting says what the agent does on its own, what it asks you about first, and offers prompts to press. To talk to your agent from Telegram, Slack or Discord later, use <strong>Settings &rarr; Reach it from your phone</strong>: connect a bot by its token, and that step is done once your first message there has been answered.</p>
 
 <h2>Setup from a terminal</h2>
-<p>With no <code>config.toml</code>, <code>aidaemon</code> runs <em>setup mode</em>: the Client Gateway on its usual loopback address (port 8788) with no agent behind it, plus a one-time link and code for a device elsewhere. The first device to redeem it becomes the owner device. <code>aidaemon setup</code> takes the model step in the terminal instead. The old interactive setup wizard is gone; <code>aidaemon setup low-latency</code> is unchanged.</p>
+<p>With no <code>config.toml</code>, <code>AIDaemon</code> runs <em>setup mode</em>: the Client Gateway on its usual loopback address (port 8788) with no agent behind it, plus a one-time link and code for a device elsewhere. The first device to redeem it becomes the owner device. <code>aidaemon setup</code> takes the model step in the terminal instead. The old interactive setup wizard is gone; <code>aidaemon setup low-latency</code> is unchanged.</p>
 `
   },
   {
     slug: '/app',
     section: 'App',
-    title: 'The AIdaemon App',
-    description: 'The AIdaemon app for desktop, web and terminal: chat, approvals, live views of the agent\'s browser, project files, read aloud, settings and usage.',
+    title: 'The AIDaemon App',
+    description: 'The AIDaemon app for desktop, web and terminal: chat, approvals, live views of the agent\'s browser, project files, read aloud, settings and usage.',
     content: () => `
-<h1>The AIdaemon App</h1>
+<h1>The AIDaemon App</h1>
 <p class="lead">One app for the desktop, the web and the terminal: chat with your agent, answer its approvals, watch its work, and change its settings.</p>
 
 <h2>Opening it</h2>
 <table class="config-table">
 <thead><tr><th>Where</th><th>How</th></tr></thead>
 <tbody>
-<tr><td>Desktop window</td><td>Open AIdaemon (macOS, Windows), or run <code>aidaemon app</code></td></tr>
+<tr><td>Desktop window</td><td>Open AIDaemon (macOS, Windows), or run <code>aidaemon app</code></td></tr>
 <tr><td>Terminal</td><td><code>aidaemon tui</code></td></tr>
 <tr><td>Browser on this machine</td><td><code>aidaemon web</code> opens the web build and pairs it (confirm in the terminal)</td></tr>
 <tr><td>Phone or another computer</td><td>Pair it, then open the gateway's address. See <a href="/app/gateway">Client Gateway &amp; pairing</a>.</td></tr>
@@ -312,10 +312,10 @@ ${callout('info', 'llama.cpp and port 8080', '<code>llama-server</code> and the 
     slug: '/app/gateway',
     section: 'App',
     title: 'Client Gateway & Pairing',
-    description: 'The Client Gateway serves the AIdaemon app and paired devices: config keys, commands, pairing, tunnels and the client protocol.',
+    description: 'The Client Gateway serves the AIDaemon app and paired devices: config keys, commands, pairing, tunnels and the client protocol.',
     content: () => `
 <h1>Client Gateway &amp; Pairing</h1>
-<p class="lead">The Client Gateway serves the AIdaemon Client Protocol to your own apps and paired devices. It listens on loopback only; other devices reach it through a tunnel.</p>
+<p class="lead">The Client Gateway serves the AIDaemon Client Protocol to your own apps and paired devices. It listens on loopback only; other devices reach it through a tunnel.</p>
 
 <h2>Turning it on</h2>
 <p>The macOS and Windows downloads and first-run setup turn it on for you. By hand:</p>
@@ -506,7 +506,7 @@ ${configTable([
 ])}
 
 <h2>[client_gateway]</h2>
-<p>Serves the <a href="/app">AIdaemon app</a> and paired devices. Full reference: <a href="/app/gateway">Client Gateway &amp; Pairing</a>.</p>
+<p>Serves the <a href="/app">AIDaemon app</a> and paired devices. Full reference: <a href="/app/gateway">Client Gateway &amp; Pairing</a>.</p>
 ${configTable([
   ['enabled', 'bool', 'false', 'Serve the Client Gateway'],
   ['bind', 'string', '"127.0.0.1"', 'Loopback only'],
@@ -1845,12 +1845,12 @@ ${configTable([
 <table class="config-table">
 <thead><tr><th>Mode</th><th>Behavior</th></tr></thead>
 <tbody>
-<tr><td><strong>Checked by AIdaemon</strong> (default)</td><td>Confined to the project folder by the agent's own sandbox; anything beyond it is asked first and judged by your own rules</td></tr>
+<tr><td><strong>Checked by AIDaemon</strong> (default)</td><td>Confined to the project folder by the agent's own sandbox; anything beyond it is asked first and judged by your own rules</td></tr>
 <tr><td><strong>Every command checked</strong></td><td>Runs on the machine itself, with every command and file change (except the agent's own short list of read-only commands) asked first</td></tr>
 <tr><td><strong>Full access</strong></td><td>Runs on the machine with nothing asked. Choosing it asks you first.</td></tr>
 </tbody>
 </table>
-<p>Claude Code and Codex ask AIdaemon instead of refusing on their own, so your grants answer what they cover and a card asks the rest. Settings also shows whether each agent can work now (<strong>Ready</strong>, or <strong>Not usable</strong> with its reason and fix, and <strong>Check again</strong>); work is never routed to an agent that cannot run.</p>
+<p>Claude Code and Codex ask AIDaemon instead of refusing on their own, so your grants answer what they cover and a card asks the rest. Settings also shows whether each agent can work now (<strong>Ready</strong>, or <strong>Not usable</strong> with its reason and fix, and <strong>Check again</strong>); work is never routed to an agent that cannot run.</p>
 
 <h2>Any Agent Client Protocol agent</h2>
 <p>An agent that speaks the <a href="https://agentclientprotocol.com" target="_blank" rel="noopener">Agent Client Protocol</a> can be added under <code>[cli_agents.tools.&lt;name&gt;]</code> with <code>protocol = "acp"</code>. aidaemon hosts it over the protocol, and each action it takes is asked first, so every one can be judged.</p>
@@ -3002,7 +3002,7 @@ ${callout('info', 'Dynamic Probes', 'Probes can also be created at runtime by th
 <h2>Recent Release Highlights</h2>
 <ul>
   <li><strong>v0.21.0</strong> &mdash; Read aloud in the app, replies that stream as they are written, Anthropic's one-hour prompt cache kept across deferred tool loads, and fixes for Anthropic base URLs ending in <code>/v1</code> and for Gemini tool calls</li>
-  <li><strong>v0.20.0</strong> &mdash; the AIdaemon app for desktop, web and terminal; macOS, Windows and ARM64 Linux downloads; first run from the app; live views of the agent's browser; coding agent permission modes; project files and project memory; model auto-upgrades; usage meters; schedules in any time zone</li>
+  <li><strong>v0.20.0</strong> &mdash; the AIDaemon app for desktop, web and terminal; macOS, Windows and ARM64 Linux downloads; first run from the app; live views of the agent's browser; coding agent permission modes; project files and project memory; model auto-upgrades; usage meters; schedules in any time zone</li>
   <li><strong>v0.9.2</strong> &mdash; better tool reliability, stronger intent checks, safer background command handling, and path aliases</li>
   <li><strong>v0.9.1</strong> &mdash; improved follow-up context, project scope constraints, graceful stall handling, and hard blocks for dangerous deletes</li>
   <li><strong>v0.9.0</strong> &mdash; consultant system rollout, major agent refactor, shared runtime reloads, and canonical event migration</li>

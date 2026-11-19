@@ -844,7 +844,7 @@ a:hover { color: var(--cyan); text-shadow: 0 0 8px var(--cyan-glow); }
 ${renderLanguageBar(page.slug, lang)}
 <header class="header">
   <a href="${docsRoot}" class="header-logo">
-    <span><span class="ai">AI</span>daemon</span>
+    <span><span class="ai">AI</span>Daemon</span>
     <span class="tag">${ui.docsTag}</span>
   </a>
   <button class="hamburger" onclick="toggleSidebar()" aria-label="${ui.toggleSidebar}">☰</button>
@@ -872,7 +872,7 @@ ${renderLanguageBar(page.slug, lang)}
       ${renderPageNav(pages, page.slug, lang, ui)}
     </div>
     <footer class="docs-footer">
-      <span><span class="ai">AI</span>daemon &middot; ${ui.footerText} &middot; ${ui.footerBuiltWith}</span>
+      <span><span class="ai">AI</span>Daemon &middot; ${ui.footerText} &middot; ${ui.footerBuiltWith}</span>
       <div>
         <a href="https://blog.aidaemon.ai" target="_blank" rel="noopener">${ui.blog}</a>
         <a href="https://github.com/davo20019/aidaemon" target="_blank" rel="noopener">GitHub</a>

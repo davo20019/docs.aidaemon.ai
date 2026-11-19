@@ -4,10 +4,10 @@ const pages = [
   {
     slug: '/',
     section: null,
-    title: 'aidaemon Dokumentation — Persönlicher KI-Agent-Daemon',
+    title: 'AIDaemon Dokumentation — Persönlicher KI-Agent-Daemon',
     description: 'Dokumentation für aidaemon, einen quelloffenen persönlichen KI-Agent-Daemon. Chatte über Telegram, Slack oder Discord. Erweitere mit MCP, nutze jedes LLM.',
     content: () => `
-<h1><span class="ai">AI</span>daemon</h1>
+<h1><span class="ai">AI</span>Daemon</h1>
 <p class="lead">Ein persönlicher KI-Agent, der als Daemon läuft. Immer aktiv, lernt ständig dazu. Chatte über Telegram, erweitere mit MCP, angetrieben von jedem LLM.</p>
 
 <p>aidaemon ist ein selbst gehosteter KI-Agent, geschrieben in Rust, der als Hintergrunddienst auf deinem Rechner läuft. Er verbindet sich mit jedem OpenAI-kompatiblen LLM-Anbieter, kommuniziert über Telegram, Slack oder Discord und kann Tools ausführen, seine eigene Konfiguration verwalten, Fakten merken, im Web browsen und Sub-Agenten starten — alles autonom.</p>

@@ -8,7 +8,7 @@ const pages = [
   {
     slug: '/sdk',
     section: 'SDK',
-    title: 'aidaemon SDK for Rust',
+    title: 'AIDaemon SDK for Rust',
     description: 'A general agent SDK for Rust: a small loop, tools as plain functions, behaviour as hooks, and runs you can pause, persist and resume.',
     content: () => `
 <h1>aidaemon SDK for Rust</h1>
