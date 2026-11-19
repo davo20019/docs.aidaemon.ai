@@ -113,7 +113,7 @@ ${renderHreflangTags(page.slug)}
 <meta property="og:description" content="${page.description || 'Documentation for aidaemon — an open-source personal AI agent daemon.'}">
 <meta property="og:type" content="article">
 <meta property="og:url" content="${canonical}">
-<meta property="og:site_name" content="aidaemon docs">
+<meta property="og:site_name" content="AIDaemon docs">
 <meta property="og:image" content="https://aidaemon.ai/og-image.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
