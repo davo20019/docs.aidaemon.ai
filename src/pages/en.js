@@ -920,10 +920,10 @@ auto_upgrade = false`, 'toml')}
     slug: '/telegram',
     section: 'Telegram',
     title: 'Bot Setup',
-    description: 'Set up aidaemon as a Telegram bot. Create a bot via BotFather, configure tokens, and enable messaging.',
+    description: 'Set up AIDaemon as a Telegram bot: create a bot with BotFather, set who may use it, and optionally use webhooks.',
     content: () => `
 <h1>Telegram Bot Setup</h1>
-<p class="lead">Telegram is aidaemon&rsquo;s primary channel, built on the teloxide framework. See also <a href="/slack">Slack</a> for workspace integration.</p>
+<p class="lead">Telegram is AIDaemon&rsquo;s primary channel. AIDaemon talks to the Telegram Bot API directly, using long polling by default or an optional webhook for lower latency. See also <a href="/slack">Slack</a> for workspace integration.</p>
 
 <h2>Create a Bot</h2>
 <ol>
@@ -934,32 +934,52 @@ auto_upgrade = false`, 'toml')}
 
 <h2>Get Your User ID</h2>
 <p>Your numeric Telegram user ID is needed for the <code>allowed_user_ids</code> list. You can find it by messaging <a href="https://t.me/userinfobot" target="_blank" rel="noopener">@userinfobot</a>.</p>
+<p>Or just message your bot: if you aren&rsquo;t allowed yet, it replies with your numeric ID and the exact <code>allowed_user_ids</code> line to add.</p>
 
 <h2>Configuration</h2>
 ${codeBlock(`[telegram]
-bot_token = "123456789:ABCdefGHIjklMNOpqrSTUvwxYZ"
+bot_token = "keychain"   # or the token itself, or "\${TELEGRAM_BOT_TOKEN}"
 allowed_user_ids = [123456789]`, 'toml', 'config.toml')}
 
-${callout('warn', 'Access Control', 'If <code>allowed_user_ids</code> is empty, <strong>anyone</strong> who finds your bot can chat with it. Always set this in production.')}
+${callout('warn', 'Access Control', 'If <code>allowed_user_ids</code> is empty, the <strong>first person to message the bot privately</strong> becomes its owner, and that ID is saved to config.toml. Group messages are refused until an owner exists. Set <code>allowed_user_ids</code> before you share the bot&rsquo;s name.')}
+
+<h2>Owners and Guests</h2>
+<p>Owners are listed per platform under <code>[users] owner_ids</code>. If none are set, every allowed user is an owner. Only owners can answer approvals and run commands that change things; other allowed users are guests.</p>
+${codeBlock(`[users]
+owner_ids = { telegram = ["123456789"] }`, 'toml', 'config.toml')}
+
+<h2>Webhook Mode</h2>
+<p>Long polling needs no setup. For lower delivery latency, a bot can receive updates by webhook instead:</p>
+${codeBlock(`[telegram.webhook]
+enabled = true
+public_url = "https://bot.example.com"
+listen_addr = "0.0.0.0:8443"
+
+# Or give every bot a webhook automatically:
+# [telegram_webhook_defaults]
+# enabled = true
+# base_domain = "bots.example.com"   # each bot gets <slug>.bots.example.com
+# port_start = 8443`, 'toml', 'config.toml')}
+<p>From chat, <code>/setup lowlatency</code> walks you through it.</p>
 
 <h2>Features</h2>
 <ul>
-  <li><strong>Typing indicator</strong> — sent every 4 seconds during agent processing</li>
-  <li><strong>Markdown rendering</strong> — agent responses are converted to Telegram HTML</li>
-  <li><strong>Long message splitting</strong> — responses over 4096 chars are split at paragraph/line boundaries</li>
-  <li><strong>Screenshot sharing</strong> — browser screenshots sent as photos with captions</li>
-  <li><strong>File transfer</strong> — send and receive documents, photos, audio, video via Telegram</li>
-  <li><strong>Live task status</strong> — <code>/tasks</code> shows running agent tasks with elapsed time</li>
-  <li><strong>Inline approval buttons</strong> — Allow Once / Allow Always / Deny buttons for command approval</li>
-  <li><strong>Multi-bot support</strong> — configure multiple Telegram bots via <code>[[telegram.bots]]</code></li>
-  <li><strong>Enhanced file handling</strong> — MIME type detection, size limits, and path security validation</li>
+  <li><strong>Typing indicator</strong> &mdash; re-sent about every 3 seconds while the agent works</li>
+  <li><strong>Markdown rendering</strong> &mdash; agent responses are converted to Telegram HTML</li>
+  <li><strong>Long message splitting</strong> &mdash; responses over 4096 chars are split at paragraph/line boundaries</li>
+  <li><strong>Screenshot sharing</strong> &mdash; browser screenshots sent as photos with captions</li>
+  <li><strong>File transfer</strong> &mdash; send and receive documents, photos, audio, video via Telegram</li>
+  <li><strong>Live task status</strong> &mdash; <code>/tasks</code> shows what&rsquo;s running in this chat</li>
+  <li><strong>Inline approval buttons</strong> &mdash; <strong>Allow</strong>, <strong>Always allow</strong> (or <strong>Allow until restart</strong>) and <strong>Deny</strong> buttons for approvals (see <a href="/telegram/approval">Approval Flow</a>)</li>
+  <li><strong>Multi-bot support</strong> &mdash; configure multiple Telegram bots with <code>[[telegram_bots]]</code> entries, or add one from chat with <code>/connect</code></li>
+  <li><strong>Enhanced file handling</strong> &mdash; MIME type detection, size limits, and path security validation</li>
 </ul>
 
 <h2>Retry Behavior</h2>
-<p>The Telegram dispatcher uses exponential backoff on crashes:</p>
+<p>If the bot&rsquo;s connection stops, AIDaemon restarts it with exponential backoff:</p>
 <ul>
   <li>Initial backoff: 5s</li>
-  <li>Doubles each crash: 5s → 10s → 20s → 40s → 60s (max)</li>
+  <li>Doubles each time: 5s &rarr; 10s &rarr; 20s &rarr; 40s &rarr; 60s (max), with a little random jitter</li>
   <li>Resets to 5s if the bot runs stable for 60+ seconds</li>
 </ul>
 `
@@ -968,42 +988,111 @@ ${callout('warn', 'Access Control', 'If <code>allowed_user_ids</code> is empty, 
     slug: '/telegram/commands',
     section: 'Telegram',
     title: 'Commands',
-    description: 'Built-in Telegram slash commands for aidaemon: /model, /clear, /cost, /status, /help, and more.',
+    description: 'Telegram commands for AIDaemon: /clear, /tasks, /cancel, /status, /model, /cost, /mode and more.',
     content: () => `
 <h1>Telegram Commands</h1>
-<p class="lead">Built-in slash commands for controlling the agent from Telegram.</p>
+<p class="lead">Built-in slash commands for controlling the agent from Telegram. They appear in Telegram&rsquo;s <code>/</code> menu. You rarely need them: just ask in plain words and the agent picks the right tools.</p>
 
+<p><code>/help</code> (or <code>/start</code>) shows the everyday commands; <code>/help all</code> lists every command.</p>
+
+<h2>Conversation</h2>
 <table class="config-table">
 <thead><tr><th>Command</th><th>Description</th></tr></thead>
 <tbody>
-<tr><td><code>/model</code></td><td>Show the current active model</td></tr>
-<tr><td><code>/model &lt;name&gt;</code></td><td>Switch to a specific model (disables auto-routing)</td></tr>
-<tr><td><code>/models</code></td><td>List all available models from the provider (active model marked)</td></tr>
-<tr><td><code>/auto</code></td><td>Re-enable automatic model routing based on query complexity</td></tr>
-<tr><td><code>/reload</code></td><td>Reload config.toml (with auto-restore from backup if broken)</td></tr>
-<tr><td><code>/restart</code></td><td>Full restart — exec new process (picks up new binary, config, MCP servers)</td></tr>
-<tr><td><code>/cost</code></td><td>Show token usage statistics (last 24h, 7d, top models)</td></tr>
-<tr><td><code>/tasks</code></td><td>List running and recent agent tasks for your session</td></tr>
-<tr><td><code>/cancel &lt;id&gt;</code></td><td>Cancel a running task by ID</td></tr>
-<tr><td><code>/help</code></td><td>Show list of available commands</td></tr>
-<tr><td><code>/start</code></td><td>Same as /help</td></tr>
+<tr><td><code>/clear</code> (or <code>/new</code>)</td><td>Start a fresh conversation. Your history is kept, and work running in this chat stops.</td></tr>
+<tr><td><code>/wipe</code></td><td>Permanently delete this conversation. The first <code>/wipe</code> only explains; send it again within a few minutes to erase it. Facts already saved to memory are kept.</td></tr>
+<tr><td><code>/context</code></td><td>Show how much of the conversation the agent can see</td></tr>
+<tr><td><code>/project [name|none]</code></td><td>Show or change the project this chat works in</td></tr>
+<tr><td><code>/memory</code></td><td>Show the memory of the project this chat works in</td></tr>
 </tbody>
 </table>
 
+<h2>Work</h2>
+<table class="config-table">
+<thead><tr><th>Command</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>/tasks</code></td><td>List what&rsquo;s running in this chat, numbered</td></tr>
+<tr><td><code>/cancel</code>, <code>/cancel all</code>, <code>/cancel &lt;number&gt;</code></td><td>Stop what&rsquo;s running in this chat: everything from one request, everything, or one item (numbers come from <code>/tasks</code>)</td></tr>
+<tr><td><code>/status</code></td><td>This chat&rsquo;s mode, what&rsquo;s running, and the next scheduled item</td></tr>
+<tr><td><code>/work [ready|running|blocked|show|comment|unblock|retry]</code></td><td>See and manage longer work that waits or runs on its own</td></tr>
+<tr><td><code>/cost</code></td><td>Show token usage (last 24h, last 7 days, top models)</td></tr>
+</tbody>
+</table>
+
+<h2>Models</h2>
+<table class="config-table">
+<thead><tr><th>Command</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>/model</code></td><td>Show the current model</td></tr>
+<tr><td><code>/model &lt;name&gt;</code></td><td>Use one model for every chat (turns off automatic model choice)</td></tr>
+<tr><td><code>/models</code></td><td>List the models your provider offers (the active one is marked)</td></tr>
+<tr><td><code>/auto</code></td><td>Go back to automatic model choice</td></tr>
+</tbody>
+</table>
+
+<h2>Access and Privacy</h2>
+<table class="config-table">
+<thead><tr><th>Command</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>/mode [full|unrestricted|readonly]</code></td><td>Show or change this chat&rsquo;s access mode</td></tr>
+<tr><td><code>/readonly</code></td><td>Make this chat read-only for 4 hours</td></tr>
+<tr><td><code>/private [off]</code></td><td>Don&rsquo;t remember or learn from your next message (<code>off</code> cancels it)</td></tr>
+<tr><td><code>/trustall on|off</code></td><td>Run every terminal command without asking</td></tr>
+</tbody>
+</table>
+
+<h2>Files</h2>
+<table class="config-table">
+<thead><tr><th>Command</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>/checkpoints</code></td><td>List filesystem checkpoints</td></tr>
+<tr><td><code>/rollback [checkpoint-id|confirm TOKEN]</code></td><td>Preview a checkpoint rollback, then confirm it</td></tr>
+</tbody>
+</table>
+
+<h2>Devices</h2>
+<table class="config-table">
+<thead><tr><th>Command</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>/pair_device</code></td><td>Pair a phone or browser with the app</td></tr>
+<tr><td><code>/devices</code></td><td>List paired devices</td></tr>
+<tr><td><code>/revoke_device &lt;id&gt;</code></td><td>Unpair a device</td></tr>
+<tr><td><code>/exposure</code></td><td>Show the tunnels publishing the gateways</td></tr>
+</tbody>
+</table>
+
+<h2>Bot Management</h2>
+<table class="config-table">
+<thead><tr><th>Command</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>/reload</code></td><td>Re-read config.toml and apply provider and model changes (see below)</td></tr>
+<tr><td><code>/restart</code></td><td>Full restart: starts a new process, picking up a new binary, config and MCP servers</td></tr>
+<tr><td><code>/setkey</code></td><td>Replace a provider&rsquo;s API key (works even when no model is available; private chat only)</td></tr>
+<tr><td><code>/connect &lt;platform&gt; &lt;token&gt;</code></td><td>Add a new bot channel</td></tr>
+<tr><td><code>/bots</code></td><td>List connected bots</td></tr>
+<tr><td><code>/setup [lowlatency]</code></td><td>Setup wizard (webhooks, low latency)</td></tr>
+<tr><td><code>/agent [codex|claude|gemini|opencode] [dir]</code></td><td>Start or manage CLI agent sessions</td></tr>
+<tr><td><code>/terminal [lite|start|open]</code></td><td>Terminal bridge commands</td></tr>
+</tbody>
+</table>
+
+${callout('info', 'Who Can Use Commands', 'Most commands are owner-only. In a shared chat, guests can use <code>/tasks</code>, <code>/private</code>, <code>/context</code>, <code>/readonly</code>, <code>/mode</code> and <code>/cancel</code>; the last four say themselves whether the guest may act.')}
+
 <h2>Model Switching</h2>
-${codeBlock(`/model claude-3.5-sonnet
-# Switches to claude-3.5-sonnet and disables auto-routing
+${codeBlock(`/model claude-sonnet-5-5
+# Uses claude-sonnet-5-5 in every chat and turns off automatic model choice
 
 /auto
-# Re-enables automatic Fast/Primary/Smart routing`, 'text')}
+# Goes back to automatic model choice`, 'text')}
 
-${callout('info', 'Model Override', 'When you manually set a model with <code>/model</code>, auto-routing is disabled until you send <code>/auto</code>.')}
+${callout('info', 'Model Override', 'When you set a model with <code>/model</code>, automatic model choice stays off until you send <code>/auto</code>. The <code>/model</code> choice applies to every chat. A model picked for one conversation in the app takes precedence over it.')}
 
 <h2>Config Reload</h2>
-<p>The <code>/reload</code> command reloads <code>config.toml</code> at runtime. If the config is invalid, aidaemon automatically restores from backup:</p>
+<p><code>/reload</code> re-reads <code>config.toml</code> and applies provider and model changes without a restart. Other changes need <code>/restart</code>. If the file no longer loads, <code>/reload</code> puts back <code>config.toml.bak</code>.</p>
+<p>At startup, a broken config is restored automatically, trying in order:</p>
 <ol>
-  <li><code>.toml.lastgood</code> — last config that successfully completed an LLM call</li>
-  <li><code>.toml.bak</code> → <code>.toml.bak.1</code> → <code>.toml.bak.2</code> — 3-deep rotation</li>
+  <li><code>.toml.lastgood</code> &mdash; the last config that completed a model call</li>
+  <li><code>.toml.bak</code> &rarr; <code>.toml.bak.1</code> &rarr; <code>.toml.bak.2</code></li>
 </ol>
 `
   },
@@ -1011,24 +1100,24 @@ ${callout('info', 'Model Override', 'When you manually set a model with <code>/m
     slug: '/telegram/approval',
     section: 'Telegram',
     title: 'Approval Flow',
-    description: 'Interactive inline keyboard approval for restricted terminal commands in Telegram.',
+    description: 'Inline keyboard approval in Telegram for commands and actions that need your OK.',
     content: () => `
 <h1>Command Approval Flow</h1>
-<p class="lead">Interactive inline keyboard approval for restricted terminal commands.</p>
+<p class="lead">Interactive inline keyboard approval for commands and actions that need your OK.</p>
 
 <h2>How It Works</h2>
 <ol>
-  <li>The agent requests a terminal command that isn't in the allowed prefixes list (or contains shell operators)</li>
-  <li>An approval request is sent to the first user in <code>allowed_user_ids</code></li>
-  <li>The user sees an inline keyboard with three buttons:</li>
+  <li>The agent wants to run a terminal command (or take another action) that needs your approval. A command runs without asking when you&rsquo;ve already allowed it, or when it&rsquo;s on the safe list and can run confined. Otherwise a quick risk check decides whether it is dangerous enough to ask you about.</li>
+  <li>The approval card is posted in the chat where the work is running. Only an owner can answer it; a guest who shares the chat sees the card but cannot decide it.</li>
+  <li>The card shows the command, its risk and any warnings, with these buttons:</li>
 </ol>
 
 <div style="margin: 1.5rem 0; padding: 1rem; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 6px;">
-  <p style="margin-bottom: 0.75rem; color: var(--text-secondary); font-size: 0.85rem;">Command requires approval:</p>
+  <p style="margin-bottom: 0.75rem; color: var(--text-secondary); font-size: 0.85rem;">Approval needed:</p>
   <code style="display: block; margin-bottom: 1rem;">rm -rf /tmp/old-cache</code>
   <div style="display: flex; gap: 0.5rem;">
-    <span style="padding: 0.4rem 0.8rem; background: var(--bg-elevated); border: 1px solid var(--green); border-radius: 4px; font-size: 0.75rem; color: var(--green);">Allow Once</span>
-    <span style="padding: 0.4rem 0.8rem; background: var(--bg-elevated); border: 1px solid var(--cyan); border-radius: 4px; font-size: 0.75rem; color: var(--cyan);">Allow Always</span>
+    <span style="padding: 0.4rem 0.8rem; background: var(--bg-elevated); border: 1px solid var(--green); border-radius: 4px; font-size: 0.75rem; color: var(--green);">Allow</span>
+    <span style="padding: 0.4rem 0.8rem; background: var(--bg-elevated); border: 1px solid var(--cyan); border-radius: 4px; font-size: 0.75rem; color: var(--cyan);">Always allow</span>
     <span style="padding: 0.4rem 0.8rem; background: var(--bg-elevated); border: 1px solid var(--red); border-radius: 4px; font-size: 0.75rem; color: var(--red);">Deny</span>
   </div>
 </div>
@@ -1037,47 +1126,64 @@ ${callout('info', 'Model Override', 'When you manually set a model with <code>/m
 <table class="config-table">
 <thead><tr><th>Option</th><th>Behavior</th></tr></thead>
 <tbody>
-<tr><td><strong>Allow Once</strong></td><td>Execute the command this time only</td></tr>
-<tr><td><strong>Allow Always</strong></td><td>Execute and add the command prefix to <code>terminal.allowed_prefixes</code> in config.toml</td></tr>
-<tr><td><strong>Deny</strong></td><td>Reject the command — agent receives denial message</td></tr>
+<tr><td><strong>Allow</strong></td><td>Run it this time only</td></tr>
+<tr><td><strong>Always allow</strong></td><td>Run it and remember the program in the database (per execution target), so you aren&rsquo;t asked again, even after a restart. config.toml is not changed.</td></tr>
+<tr><td><strong>Allow until restart</strong></td><td>Shown instead of <strong>Always allow</strong> for critical commands, or for everything when <code>terminal.permission_mode = "cautious"</code>. The allowance lasts until the daemon restarts.</td></tr>
+<tr><td><strong>Deny</strong></td><td>Refuse &mdash; the agent is told it was denied</td></tr>
 </tbody>
 </table>
+<p>Some actions offer only <strong>Allow</strong> and <strong>Deny</strong>. Cards also cover more than terminal commands, such as browser actions and confirming new scheduled work (<strong>Approve &amp; activate</strong> / <strong>Cancel</strong>).</p>
 
-${callout('warn', 'Shell Operators', 'Commands containing <code>;</code> <code>|</code> <code>&amp;&amp;</code> <code>||</code> <code>$()</code> or backticks <strong>always</strong> require approval, even if the prefix is whitelisted. This prevents injection attacks.')}
+${callout('info', 'Expiry', 'An unanswered card expires after 5 minutes, with a reminder shortly before, and counts as <strong>Deny</strong>.')}
 
-${callout('danger', 'Untrusted Sources', 'Sessions originating from triggers (like email) are marked as untrusted. All terminal commands in untrusted sessions <strong>always</strong> require approval, regardless of allowed prefixes.')}
+<h2>What Always Asks</h2>
+<ul>
+  <li>Commands from untrusted triggers, such as <a href="/triggers">email</a></li>
+  <li>Commands asking for capabilities beyond the task</li>
+  <li>Commands touching protected credential paths, even if allowed before</li>
+  <li>New commands that would keep running in the background (detached)</li>
+</ul>
+
+${callout('warn', 'Chained Commands', 'A chained command (<code>;</code> <code>|</code> <code>&amp;&amp;</code> <code>||</code>) counts as allowed only if every part&rsquo;s program is on your permanent allow list. An allowance you gave for one session never unlocks a chain. Command substitution (<code>$()</code>, backticks) is never covered by an allowance.')}
+
+${callout('danger', 'Untrusted Sources', 'Sessions started by triggers (like email) are untrusted. Every terminal command in them requires approval, whatever you allowed before.')}
 `
   },
   {
     slug: '/slack',
     section: 'Slack',
     title: 'Workspace Setup',
-    description: 'Connect aidaemon to Slack via Socket Mode. Create a Slack app, configure OAuth scopes, and enable real-time messaging.',
+    description: 'Connect AIDaemon to Slack via Socket Mode. Create a Slack app, add scopes and events, and set who may use it.',
     content: () => `
 <h1>Slack Integration</h1>
-<p class="lead">Connect aidaemon to your Slack workspace via Socket Mode for real-time messaging.</p>
+<p class="lead">Connect AIDaemon to your Slack workspace via Socket Mode for real-time messaging.</p>
 
 ${callout('success', 'Pre-built Binaries', 'If you installed via the one-line script or Homebrew, Slack support is already included. Just configure <code>config.toml</code> below. The feature flag is only needed when <a href="/getting-started/build">building from source</a>.')}
 
 <h2>Create a Slack App</h2>
 <ol>
   <li>Go to <a href="https://api.slack.com/apps" target="_blank" rel="noopener">api.slack.com/apps</a> and click <strong>Create New App</strong></li>
-  <li>Choose <strong>From scratch</strong>, name it (e.g., "aidaemon"), and select your workspace</li>
+  <li>Choose <strong>From scratch</strong>, name it (e.g., "AIDaemon"), and select your workspace</li>
   <li>Under <strong>Socket Mode</strong>, enable it and generate an <strong>App-Level Token</strong> with the <code>connections:write</code> scope &mdash; this is your <code>app_token</code> (<code>xapp-...</code>)</li>
   <li>Under <strong>OAuth &amp; Permissions</strong>, add these <strong>Bot Token Scopes</strong>:
     <ul>
+      <li><code>app_mentions:read</code> &mdash; see messages that @mention the bot</li>
+      <li><code>channels:history</code> &mdash; read messages and threads in public channels (also used by the <code>read_channel_history</code> tool)</li>
       <li><code>channels:read</code> &mdash; list members in public channels</li>
       <li><code>chat:write</code> &mdash; send messages</li>
       <li><code>files:read</code> &mdash; download files sent by users</li>
       <li><code>files:write</code> &mdash; upload files to Slack</li>
+      <li><code>groups:history</code> &mdash; read messages and threads in private channels</li>
       <li><code>groups:read</code> &mdash; list members in private channels (needed for resolving user names in private channels)</li>
+      <li><code>im:history</code> &mdash; read direct messages</li>
       <li><code>im:read</code> &mdash; read DM metadata (required for file transfers in direct messages)</li>
       <li><code>reactions:write</code> &mdash; add status reactions (hourglass during processing)</li>
       <li><code>users:read</code> &mdash; resolve user info</li>
     </ul>
   </li>
-  <li>Under <strong>Event Subscriptions</strong>, enable events and subscribe to:
+  <li>Under <strong>Event Subscriptions</strong>, enable events and subscribe to these bot events:
     <ul>
+      <li><code>app_mention</code> &mdash; messages that @mention the bot</li>
       <li><code>message.channels</code> &mdash; messages in public channels</li>
       <li><code>message.groups</code> &mdash; messages in private channels</li>
       <li><code>message.im</code> &mdash; direct messages</li>
@@ -1089,19 +1195,23 @@ ${callout('success', 'Pre-built Binaries', 'If you installed via the one-line sc
 
 <h2>Configuration</h2>
 ${codeBlock(`[slack]
-enabled = true
 app_token = "xapp-1-..."
 bot_token = "xoxb-..."
 allowed_user_ids = ["U123456789"]
-use_threads = true`, 'toml', 'config.toml')}
+use_threads = true
+
+[users]
+owner_ids = { slack = ["U123456789"] }`, 'toml', 'config.toml')}
 
 ${configTable([
-  ['enabled', 'bool', 'false', 'Enable the Slack channel'],
+  ['enabled', 'bool', 'false', 'Kept for older configs; the bot starts whenever both tokens are set.'],
   ['app_token', 'string', '&mdash;', 'App-Level Token for Socket Mode (<code>xapp-...</code>). Supports <code>"keychain"</code> and <code>$&#123;ENV&#125;</code>.'],
   ['bot_token', 'string', '&mdash;', 'Bot User OAuth Token (<code>xoxb-...</code>). Supports <code>"keychain"</code> and <code>$&#123;ENV&#125;</code>.'],
-  ['allowed_user_ids', 'array', '[]', 'Slack user IDs allowed to interact. Empty = no restriction.'],
+  ['allowed_user_ids', 'array', '[]', 'Slack user IDs allowed to use the bot. If empty and no owners are set, the first person to DM the bot claims it.'],
   ['use_threads', 'bool', 'true', 'Reply in threads by default. Each thread gets its own session context.'],
 ])}
+
+<p>Owners are set under <code>[users] owner_ids</code>; if none are set, everyone on the allowlist is an owner. For more than one Slack bot, use <code>[[slack_bots]]</code> entries with the same keys.</p>
 
 <h2>Find Your Slack User ID</h2>
 <p>Click on your profile in Slack, then click <strong>More</strong> &rarr; <strong>Copy member ID</strong>. The format is <code>U</code> followed by alphanumeric characters (e.g., <code>U0123ABCDEF</code>).</p>
@@ -1111,12 +1221,13 @@ ${configTable([
   <li><strong>Socket Mode</strong> &mdash; real-time WebSocket connection, no public URL required</li>
   <li><strong>Threaded replies</strong> &mdash; configurable threaded conversations with per-thread session context</li>
   <li><strong>File transfer</strong> &mdash; send and receive files through Slack</li>
-  <li><strong>Block Kit approvals</strong> &mdash; interactive buttons for terminal command approval</li>
-  <li><strong>Slash commands</strong> &mdash; same commands as Telegram (<code>/cost</code>, <code>/model</code>, <code>/tasks</code>, etc.)</li>
+  <li><strong>Block Kit approvals</strong> &mdash; interactive buttons for approvals (see <a href="/slack/approval">Approval Flow</a>)</li>
+  <li><strong>Commands</strong> &mdash; the shared commands, typed as <code>!command</code> (for example <code>!cost</code>, <code>!model</code>, <code>!tasks</code>), plus <code>!workspace</code> and <code>!restart</code> (see <a href="/slack/commands">Commands</a>)</li>
   <li><strong>Status reactions</strong> &mdash; hourglass emoji while processing, removed on completion</li>
   <li><strong>Markdown conversion</strong> &mdash; standard markdown automatically converted to Slack mrkdwn format</li>
-  <li><strong>Message chunking</strong> &mdash; long responses split to respect Slack&rsquo;s 39KB message limit</li>
+  <li><strong>Message chunking</strong> &mdash; long responses split to respect Slack&rsquo;s message limits</li>
   <li><strong>Auto-reconnect</strong> &mdash; exponential backoff on connection failure (5s &rarr; 60s max)</li>
+  <li><strong>Multi-bot support</strong> &mdash; run several Slack bots with <code>[[slack_bots]]</code></li>
 </ul>
 
 <h2>Session Model</h2>
@@ -1125,61 +1236,127 @@ ${configTable([
   <li><strong>Channel message:</strong> <code>slack:{channel_id}</code></li>
   <li><strong>Thread message:</strong> <code>slack:{channel_id}:{thread_ts}</code> (when <code>use_threads</code> is enabled)</li>
 </ul>
+<p>With <code>use_threads</code> on, the bot answers a top-level channel message in a new thread, so that conversation gets its own session. Session IDs are prefixed with the bot&rsquo;s name, so several bots never share a session.</p>
 <p>Each session maintains its own conversation history, working memory, and facts context.</p>
 
-${callout('warn', 'Access Control', 'If <code>allowed_user_ids</code> is empty, <strong>anyone</strong> in the workspace who can message the bot can interact with it. Always set this in production.')}
+${callout('warn', 'Access Control', 'If both <code>allowed_user_ids</code> and the Slack owner list are empty, the first person to DM the bot becomes its owner and is saved to config. People not on the list who @mention the bot get a limited public role, which cannot run commands. Set <code>allowed_user_ids</code> in production.')}
 `
   },
   {
     slug: '/slack/commands',
     section: 'Slack',
     title: 'Commands',
-    description: 'Slash commands available for aidaemon in Slack: /model, /clear, /cost, /status, and more.',
+    description: 'Commands for AIDaemon in Slack, typed as !command: !clear, !tasks, !cancel, !model, !cost, !workspace and more.',
     content: () => `
 <h1>Slack Commands</h1>
-<p class="lead">Slash commands available in Slack. The same set of commands as Telegram.</p>
+<p class="lead">Commands available in Slack: the shared commands, without Telegram&rsquo;s bot-management and terminal commands. Type them as <code>!command</code>, because Slack keeps <code>/</code> for its own slash commands; <code>/command</code> is accepted when Slack passes it through.</p>
 
+<p><code>!help</code> (or <code>!start</code>) shows the everyday commands with Restart, Reload, Clear and Cost buttons; <code>!help all</code> lists every command.</p>
+
+<h2>Conversation</h2>
 <table class="config-table">
 <thead><tr><th>Command</th><th>Description</th></tr></thead>
 <tbody>
-<tr><td><code>/model</code></td><td>Show the current active model</td></tr>
-<tr><td><code>/model &lt;name&gt;</code></td><td>Switch to a specific model (disables auto-routing)</td></tr>
-<tr><td><code>/models</code></td><td>List all available models from the provider (active model marked)</td></tr>
-<tr><td><code>/auto</code></td><td>Re-enable automatic model routing based on query complexity</td></tr>
-<tr><td><code>/reload</code></td><td>Reload config.toml (with auto-restore from backup if broken)</td></tr>
-<tr><td><code>/restart</code></td><td>Full restart &mdash; exec new process (picks up new binary, config, MCP servers)</td></tr>
-<tr><td><code>/cost</code></td><td>Show token usage statistics (last 24h, 7d, top models)</td></tr>
-<tr><td><code>/tasks</code></td><td>List running and recent agent tasks for your session</td></tr>
-<tr><td><code>/cancel &lt;id&gt;</code></td><td>Cancel a running task by ID</td></tr>
-<tr><td><code>/help</code></td><td>Show list of available commands</td></tr>
+<tr><td><code>!clear</code> (or <code>!new</code>)</td><td>Start a fresh conversation. Your history is kept, and work running in this chat stops.</td></tr>
+<tr><td><code>!wipe</code></td><td>Permanently delete this conversation. The first <code>!wipe</code> only explains; send it again within a few minutes to erase it. Facts already saved to memory are kept.</td></tr>
+<tr><td><code>!context</code></td><td>Show how much of the conversation the agent can see</td></tr>
+<tr><td><code>!project [name|none]</code></td><td>Show or change the project this chat works in</td></tr>
+<tr><td><code>!memory</code></td><td>Show the memory of the project this chat works in</td></tr>
 </tbody>
 </table>
 
-${callout('info', 'Slash vs. Plain Text', 'In Slack, these commands are sent as regular messages starting with <code>/</code> in a DM or channel with the bot. They are not registered as Slack slash commands in the app manifest.')}
+<h2>Work</h2>
+<table class="config-table">
+<thead><tr><th>Command</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>!tasks</code></td><td>List what&rsquo;s running in this chat, numbered</td></tr>
+<tr><td><code>!cancel</code>, <code>!cancel all</code>, <code>!cancel &lt;number&gt;</code></td><td>Stop what&rsquo;s running in this chat: everything from one request, everything, or one item (numbers come from <code>!tasks</code>)</td></tr>
+<tr><td><code>!status</code></td><td>This chat&rsquo;s mode, what&rsquo;s running, and the next scheduled item</td></tr>
+<tr><td><code>!work [ready|running|blocked|show|comment|unblock|retry]</code></td><td>See and manage longer work that waits or runs on its own</td></tr>
+<tr><td><code>!cost</code></td><td>Show token usage (last 24h, last 7 days, top models)</td></tr>
+</tbody>
+</table>
+
+<h2>Models</h2>
+<table class="config-table">
+<thead><tr><th>Command</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>!model</code></td><td>Show the current model</td></tr>
+<tr><td><code>!model &lt;name&gt;</code></td><td>Use one model for every chat (turns off automatic model choice)</td></tr>
+<tr><td><code>!models</code></td><td>List the models your provider offers (the active one is marked)</td></tr>
+<tr><td><code>!auto</code></td><td>Go back to automatic model choice</td></tr>
+</tbody>
+</table>
+
+<h2>Access and Privacy</h2>
+<table class="config-table">
+<thead><tr><th>Command</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>!mode [full|unrestricted|readonly]</code></td><td>Show or change this chat&rsquo;s access mode</td></tr>
+<tr><td><code>!readonly</code></td><td>Make this chat read-only for 4 hours</td></tr>
+<tr><td><code>!private [off]</code></td><td>Don&rsquo;t remember or learn from your next message (<code>off</code> cancels it)</td></tr>
+<tr><td><code>!trustall on|off</code></td><td>Run every terminal command without asking</td></tr>
+</tbody>
+</table>
+
+<h2>Files</h2>
+<table class="config-table">
+<thead><tr><th>Command</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>!checkpoints</code></td><td>List filesystem checkpoints</td></tr>
+<tr><td><code>!rollback [checkpoint-id|confirm TOKEN]</code></td><td>Preview a checkpoint rollback, then confirm it</td></tr>
+</tbody>
+</table>
+
+<h2>Devices</h2>
+<table class="config-table">
+<thead><tr><th>Command</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>!pair_device</code></td><td>Pair a phone or browser with the app</td></tr>
+<tr><td><code>!devices</code></td><td>List paired devices</td></tr>
+<tr><td><code>!revoke_device &lt;id&gt;</code></td><td>Unpair a device</td></tr>
+<tr><td><code>!exposure</code></td><td>Show the tunnels publishing the gateways</td></tr>
+</tbody>
+</table>
+
+<h2>Bot Management</h2>
+<table class="config-table">
+<thead><tr><th>Command</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>!reload</code></td><td>Re-read config.toml and apply provider and model changes (other changes need <code>!restart</code>)</td></tr>
+<tr><td><code>!restart</code></td><td>Full restart: starts a new process, picking up a new binary, config and MCP servers (owner only)</td></tr>
+<tr><td><code>!workspace grant &lt;@user&gt; &lt;read|edit&gt; &lt;project-path&gt; [hours]</code></td><td>Give someone expiring access to a project (up to 168 hours). Send it in the private Slack group where the grant should apply. Owner only.</td></tr>
+<tr><td><code>!workspace revoke &lt;@user&gt;</code> / <code>!workspace list</code></td><td>Remove a grant, or list the current grants</td></tr>
+</tbody>
+</table>
+
+${callout('info', 'Who Can Use Commands', 'Most commands are owner-only. Guests can use <code>!tasks</code>, <code>!private</code>, <code>!context</code>, <code>!readonly</code>, <code>!mode</code> and <code>!cancel</code>; people with only the public role (they @mentioned the bot but aren&rsquo;t on the allowlist) cannot run commands.')}
+
+${callout('info', 'Slash vs. Plain Text', 'These commands are sent as regular messages in a DM or channel with the bot. They are not registered as Slack slash commands in the app manifest. If you add native slash commands to the app yourself, the bot handles them, for owners only.')}
 `
   },
   {
     slug: '/slack/approval',
     section: 'Slack',
     title: 'Approval Flow',
-    description: 'Interactive Block Kit buttons for approving restricted terminal commands in Slack.',
+    description: 'Interactive Block Kit buttons for approving commands and actions in Slack.',
     content: () => `
 <h1>Slack Approval Flow</h1>
-<p class="lead">Interactive Block Kit buttons for approving restricted terminal commands in Slack.</p>
+<p class="lead">Interactive Block Kit buttons for approving commands and actions in Slack.</p>
 
 <h2>How It Works</h2>
 <ol>
-  <li>The agent requests a terminal command that isn&rsquo;t in the allowed prefixes list (or contains shell operators)</li>
-  <li>An approval message is sent to the Slack channel/thread with Block Kit buttons</li>
-  <li>The user sees three interactive buttons:</li>
+  <li>The agent wants to run a terminal command (or take another action) that needs your approval. A command runs without asking when you&rsquo;ve already allowed it, or when it&rsquo;s on the safe list and can run confined. Otherwise a quick risk check decides whether it is dangerous enough to ask you about.</li>
+  <li>The approval card is posted in the Slack channel or thread where the work is running. Only an owner can answer it.</li>
+  <li>The card shows the command, its risk and any warnings, with these buttons:</li>
 </ol>
 
 <div style="margin: 1.5rem 0; padding: 1rem; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 6px;">
-  <p style="margin-bottom: 0.75rem; color: var(--text-secondary); font-size: 0.85rem;">Command requires approval:</p>
+  <p style="margin-bottom: 0.75rem; color: var(--text-secondary); font-size: 0.85rem;">Approval needed:</p>
   <code style="display: block; margin-bottom: 1rem;">rm -rf /tmp/old-cache</code>
   <div style="display: flex; gap: 0.5rem;">
-    <span style="padding: 0.4rem 0.8rem; background: var(--bg-elevated); border: 1px solid var(--green); border-radius: 4px; font-size: 0.75rem; color: var(--green);">Allow Once</span>
-    <span style="padding: 0.4rem 0.8rem; background: var(--bg-elevated); border: 1px solid var(--cyan); border-radius: 4px; font-size: 0.75rem; color: var(--cyan);">Allow Always</span>
+    <span style="padding: 0.4rem 0.8rem; background: var(--bg-elevated); border: 1px solid var(--green); border-radius: 4px; font-size: 0.75rem; color: var(--green);">Allow</span>
+    <span style="padding: 0.4rem 0.8rem; background: var(--bg-elevated); border: 1px solid var(--cyan); border-radius: 4px; font-size: 0.75rem; color: var(--cyan);">Always allow</span>
     <span style="padding: 0.4rem 0.8rem; background: var(--bg-elevated); border: 1px solid var(--red); border-radius: 4px; font-size: 0.75rem; color: var(--red);">Deny</span>
   </div>
 </div>
@@ -1188,135 +1365,211 @@ ${callout('info', 'Slash vs. Plain Text', 'In Slack, these commands are sent as 
 <table class="config-table">
 <thead><tr><th>Option</th><th>Behavior</th></tr></thead>
 <tbody>
-<tr><td><strong>Allow Once</strong></td><td>Execute the command this time only</td></tr>
-<tr><td><strong>Allow Always</strong></td><td>Execute and persist the command prefix for future auto-approval</td></tr>
-<tr><td><strong>Deny</strong></td><td>Reject the command &mdash; agent receives denial message</td></tr>
+<tr><td><strong>Allow</strong></td><td>Run it this time only</td></tr>
+<tr><td><strong>Always allow</strong></td><td>Run it and remember the program in the database (per execution target), so you aren&rsquo;t asked again, even after a restart. config.toml is not changed.</td></tr>
+<tr><td><strong>Allow until restart</strong></td><td>Shown instead of <strong>Always allow</strong> for critical commands, or for everything when <code>terminal.permission_mode = "cautious"</code>. The allowance lasts until the daemon restarts.</td></tr>
+<tr><td><strong>Deny</strong></td><td>Refuse &mdash; the agent is told it was denied</td></tr>
 </tbody>
 </table>
+<p>Some actions offer only <strong>Allow</strong> and <strong>Deny</strong>. Cards also cover more than terminal commands, such as browser actions and confirming new scheduled work (<strong>Approve &amp; activate</strong> / <strong>Cancel</strong>).</p>
 
-<p>The approval flow in Slack works identically to Telegram. &ldquo;Allow Always&rdquo; persists the prefix to SQLite so it survives daemon restarts.</p>
+${callout('info', 'Expiry', 'An unanswered card expires after 5 minutes, with a reminder shortly before, and counts as <strong>Deny</strong>.')}
 
-${callout('warn', 'Shell Operators', 'Commands containing <code>;</code> <code>|</code> <code>&amp;&amp;</code> <code>||</code> <code>$()</code> or backticks <strong>always</strong> require approval, even if the prefix is whitelisted.')}
+<h2>What Always Asks</h2>
+<ul>
+  <li>Commands from untrusted triggers, such as <a href="/triggers">email</a></li>
+  <li>Commands asking for capabilities beyond the task</li>
+  <li>Commands touching protected credential paths, even if allowed before</li>
+  <li>New commands that would keep running in the background (detached)</li>
+</ul>
+
+${callout('warn', 'Chained Commands', 'A chained command (<code>;</code> <code>|</code> <code>&amp;&amp;</code> <code>||</code>) counts as allowed only if every part&rsquo;s program is on your permanent allow list. An allowance you gave for one session never unlocks a chain. Command substitution (<code>$()</code>, backticks) is never covered by an allowance.')}
+
+${callout('danger', 'Untrusted Sources', 'Sessions started by triggers (like email) are untrusted. Every terminal command in them requires approval, whatever you allowed before.')}
 `
   },
 {
     slug: '/discord',
     section: 'Discord',
     title: 'Bot Setup',
-    description: 'Connect aidaemon to Discord. Create a Discord application, configure the bot, and enable slash commands.',
+    description: 'Connect AIDaemon to Discord. Create a Discord application, enable Message Content, and set who may use it.',
     content: () => `
 <h1>Discord Bot Setup</h1>
-<p class="lead">Connect aidaemon to Discord via the gateway API.</p>
+<p class="lead">Connect AIDaemon to Discord through a direct connection to the Discord Gateway and REST API.</p>
 
 ${callout('success', 'Pre-built Binaries', 'If you installed via the one-line script or Homebrew, Discord support is already included. Just configure <code>config.toml</code> below. The feature flag is only needed when <a href="/getting-started/build">building from source</a>.')}
 
 <h2>Create a Discord Application</h2>
 <ol>
   <li>Go to the <a href="https://discord.com/developers/applications" target="_blank" rel="noopener">Discord Developer Portal</a></li>
-  <li>Click <strong>New Application</strong> and name it (e.g., &ldquo;aidaemon&rdquo;)</li>
+  <li>Click <strong>New Application</strong> and name it (e.g., &ldquo;AIDaemon&rdquo;)</li>
   <li>Under <strong>Bot</strong>, click <strong>Add Bot</strong></li>
   <li>Copy the <strong>Bot Token</strong> &mdash; this is your <code>bot_token</code></li>
-  <li>Enable these <strong>Privileged Gateway Intents</strong>:
-    <ul>
-      <li><code>Message Content Intent</code> &mdash; read message text</li>
-      <li><code>Server Members Intent</code> &mdash; resolve user info</li>
-    </ul>
-  </li>
-  <li>Under <strong>OAuth2 &rarr; URL Generator</strong>, select scopes <code>bot</code> and <code>applications.commands</code>, then permissions: Send Messages, Read Message History, Attach Files, Use Slash Commands</li>
+  <li>Enable the <strong>Message Content Intent</strong> under <strong>Privileged Gateway Intents</strong> &mdash; the bot needs it to read message text. No other privileged intent is needed.</li>
+  <li>Under <strong>OAuth2 &rarr; URL Generator</strong>, select scopes <code>bot</code> and <code>applications.commands</code>, then permissions: View Channels, Send Messages, Read Message History, Attach Files, Use Slash Commands</li>
   <li>Use the generated URL to invite the bot to your server</li>
 </ol>
 
 <h2>Configuration</h2>
 ${codeBlock(`[discord]
-bot_token = "MTIzNDU2Nzg5MDEyMzQ1Njc4OQ.AbCdEf.xxxxx"
+bot_token = "keychain"   # or the token itself
 allowed_user_ids = [123456789012345678]
-guild_id = 987654321098765432`, 'toml', 'config.toml')}
+guild_id = 987654321098765432
+
+[users]
+owner_ids = { discord = ["123456789012345678"] }`, 'toml', 'config.toml')}
 
 ${configTable([
   ['bot_token', 'string', '&mdash;', 'Discord bot token from the Developer Portal. Supports <code>"keychain"</code>.'],
-  ['allowed_user_ids', 'array', '[]', 'Discord user IDs (snowflake integers) allowed to interact. Empty = no restriction.'],
-  ['guild_id', 'integer', 'null', 'Optional server/guild ID. If set, the bot only responds in that server.'],
+  ['allowed_user_ids', 'array', '[]', 'Discord user IDs (integers) allowed to DM the bot. If empty and no owners are set, the first person to DM the bot claims it.'],
+  ['guild_id', 'integer', 'null', 'Optional server ID. Slash commands are registered in that server, where they appear at once, instead of globally, which can take up to an hour. It does not limit where the bot answers.'],
 ])}
+
+<p>Owners are set under <code>[users] owner_ids</code>; if none are set, the allowlist holds the owners. For more than one Discord bot, use <code>[[discord_bots]]</code> entries with the same keys.</p>
 
 <h2>Get Your Discord User ID</h2>
 <p>Enable <strong>Developer Mode</strong> in Discord settings (Appearance &rarr; Advanced), then right-click your username and select <strong>Copy User ID</strong>.</p>
 
 <h2>Features</h2>
 <ul>
-  <li><strong>Gateway connection</strong> &mdash; real-time WebSocket connection via serenity framework</li>
+  <li><strong>Gateway connection</strong> &mdash; a direct connection to the Discord Gateway (v10) and REST API</li>
   <li><strong>Slash commands</strong> &mdash; registered application commands (see <a href="/discord/commands">Commands</a>)</li>
   <li><strong>Interactive buttons</strong> &mdash; approval flow with clickable buttons (see <a href="/discord/approval">Approval Flow</a>)</li>
-  <li><strong>File transfer</strong> &mdash; send and receive files as Discord attachments</li>
+  <li><strong>File transfer</strong> &mdash; send and receive files as Discord attachments (files the bot sends are limited to 10 MB)</li>
   <li><strong>Message splitting</strong> &mdash; long responses split to respect Discord&rsquo;s 2000-char message limit</li>
   <li><strong>Auto-reconnect</strong> &mdash; exponential backoff on connection failure (5s &rarr; 60s cap)</li>
   <li><strong>User allowlist</strong> &mdash; per-bot token access control</li>
-  <li><strong>Multi-bot support</strong> &mdash; run multiple Discord bots with separate configs</li>
+  <li><strong>Multi-bot support</strong> &mdash; run multiple Discord bots with separate configs (<code>[[discord_bots]]</code>)</li>
 </ul>
 
 <h2>Session Model</h2>
-<p>Discord sessions are identified by channel:</p>
+<p>Discord sessions are identified by where the conversation happens:</p>
 <ul>
-  <li><strong>Channel message:</strong> <code>discord:{channel_id}</code></li>
+  <li><strong>Server channel:</strong> <code>discord:ch:{channel_id}</code></li>
+  <li><strong>Direct message:</strong> <code>discord:dm:{user_id}</code></li>
 </ul>
-<p>Each channel maintains its own conversation history, working memory, and facts context.</p>
+<p>Session IDs are prefixed with the bot&rsquo;s name, so several bots never share a session. Each session maintains its own conversation history, working memory, and facts context.</p>
 
-${callout('warn', 'Access Control', 'If <code>allowed_user_ids</code> is empty, <strong>anyone</strong> who can message the bot can interact with it. Always set this in production.')}
+${callout('warn', 'Access Control', 'Server members not on the list can talk to the bot as guests, but only when they mention it or reply to it. Their files are not saved, and they can&rsquo;t answer approvals or run owner commands. DMs need the allowlist. Always set <code>allowed_user_ids</code> in production.')}
 `
   },
   {
     slug: '/discord/commands',
     section: 'Discord',
     title: 'Slash Commands',
-    description: 'Registered Discord application commands for aidaemon: /ask, /model, /clear, /status, and more.',
+    description: 'Discord commands for AIDaemon: /model, /clear, /tasks, /cancel, /cost, /status and more.',
     content: () => `
 <h1>Discord Slash Commands</h1>
-<p class="lead">Registered application commands available in Discord. Accessible via <code>/</code> in the message input.</p>
+<p class="lead">Commands available in Discord. The most-used ones are registered as application commands, so they show up when you type <code>/</code>; the rest work when you send them as a message.</p>
 
+<p><code>/help</code> (or <code>/start</code>) shows the everyday commands; <code>/help all</code> lists every command.</p>
+
+${callout('info', 'In the Slash Menu', 'The menu lists <code>/model</code>, <code>/models</code>, <code>/auto</code>, <code>/reload</code>, <code>/tasks</code>, <code>/cancel</code>, <code>/clear</code>, <code>/wipe</code>, <code>/cost</code>, <code>/context</code> and <code>/help</code>. Each takes an optional <code>args</code> text, for example <code>/model args:claude-sonnet-5-5</code>. Every other command below works when typed as a normal message, such as <code>/status</code> or <code>/mode readonly</code>.')}
+
+<h2>Conversation</h2>
 <table class="config-table">
 <thead><tr><th>Command</th><th>Description</th></tr></thead>
 <tbody>
-<tr><td><code>/ask &lt;message&gt;</code></td><td>Send a message to the agent</td></tr>
-<tr><td><code>/model</code></td><td>Show the current active model</td></tr>
-<tr><td><code>/model &lt;name&gt;</code></td><td>Switch to a specific model (disables auto-routing)</td></tr>
-<tr><td><code>/models</code></td><td>List all available models from the provider</td></tr>
-<tr><td><code>/auto</code></td><td>Re-enable automatic model routing</td></tr>
-<tr><td><code>/clear</code></td><td>Clear session conversation history</td></tr>
-<tr><td><code>/cost</code></td><td>Show token usage statistics</td></tr>
-<tr><td><code>/tasks</code></td><td>List running and recent agent tasks</td></tr>
-<tr><td><code>/cancel &lt;id&gt;</code></td><td>Cancel a running task by ID</td></tr>
-<tr><td><code>/status</code></td><td>Show daemon status and uptime</td></tr>
-<tr><td><code>/help</code></td><td>Show list of available commands</td></tr>
+<tr><td><code>/clear</code> (or <code>/new</code>)</td><td>Start a fresh conversation. Your history is kept (use <code>/wipe</code> to delete it), and work running in this chat stops.</td></tr>
+<tr><td><code>/wipe</code></td><td>Permanently delete this conversation. The first <code>/wipe</code> only explains; send it again within a few minutes to erase it. Facts already saved to memory are kept.</td></tr>
+<tr><td><code>/context</code></td><td>Show how much of the conversation the agent can see</td></tr>
+<tr><td><code>/project [name|none]</code></td><td>Show or change the project this chat works in</td></tr>
+<tr><td><code>/memory</code></td><td>Show the memory of the project this chat works in</td></tr>
 </tbody>
 </table>
 
-<h2>Regular Messages</h2>
-<p>In addition to slash commands, users can also interact by mentioning the bot or sending direct messages. The bot processes these as regular conversation messages.</p>
+<h2>Work</h2>
+<table class="config-table">
+<thead><tr><th>Command</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>/tasks</code></td><td>List what&rsquo;s running in this chat, numbered</td></tr>
+<tr><td><code>/cancel</code>, <code>/cancel all</code>, <code>/cancel &lt;number&gt;</code></td><td>Stop what&rsquo;s running in this chat: everything from one request, everything, or one item (numbers come from <code>/tasks</code>)</td></tr>
+<tr><td><code>/status</code></td><td>This chat&rsquo;s mode, what&rsquo;s running, and the next scheduled item</td></tr>
+<tr><td><code>/work [ready|running|blocked|show|comment|unblock|retry]</code></td><td>See and manage longer work that waits or runs on its own</td></tr>
+<tr><td><code>/cost</code></td><td>Show token usage (last 24h, last 7 days, top models)</td></tr>
+</tbody>
+</table>
 
-${callout('info', 'Command Registration', 'Slash commands are automatically registered with Discord when the bot connects. If you change guild_id, commands will re-register for the new scope.')}
+<h2>Models</h2>
+<table class="config-table">
+<thead><tr><th>Command</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>/model</code></td><td>Show the current model</td></tr>
+<tr><td><code>/model &lt;name&gt;</code></td><td>Use one model for every chat (turns off automatic model choice)</td></tr>
+<tr><td><code>/models</code></td><td>List the models your provider offers (the active one is marked)</td></tr>
+<tr><td><code>/auto</code></td><td>Go back to automatic model choice</td></tr>
+</tbody>
+</table>
+
+<h2>Access and Privacy</h2>
+<table class="config-table">
+<thead><tr><th>Command</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>/mode [full|unrestricted|readonly]</code></td><td>Show or change this chat&rsquo;s access mode</td></tr>
+<tr><td><code>/readonly</code></td><td>Make this chat read-only for 4 hours</td></tr>
+<tr><td><code>/private [off]</code></td><td>Don&rsquo;t remember or learn from your next message (<code>off</code> cancels it)</td></tr>
+<tr><td><code>/trustall on|off</code></td><td>Run every terminal command without asking</td></tr>
+</tbody>
+</table>
+
+<h2>Files</h2>
+<table class="config-table">
+<thead><tr><th>Command</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>/checkpoints</code></td><td>List filesystem checkpoints</td></tr>
+<tr><td><code>/rollback [checkpoint-id|confirm TOKEN]</code></td><td>Preview a checkpoint rollback, then confirm it</td></tr>
+</tbody>
+</table>
+
+<h2>Devices</h2>
+<table class="config-table">
+<thead><tr><th>Command</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>/pair_device</code></td><td>Pair a phone or browser with the app</td></tr>
+<tr><td><code>/devices</code></td><td>List paired devices</td></tr>
+<tr><td><code>/revoke_device &lt;id&gt;</code></td><td>Unpair a device</td></tr>
+<tr><td><code>/exposure</code></td><td>Show the tunnels publishing the gateways</td></tr>
+</tbody>
+</table>
+
+<h2>Bot Management</h2>
+<table class="config-table">
+<thead><tr><th>Command</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>/reload</code></td><td>Re-read config.toml and apply provider and model changes</td></tr>
+</tbody>
+</table>
+
+${callout('info', 'Who Can Use Commands', 'Most commands are owner-only. Guests can use <code>/tasks</code>, <code>/private</code>, <code>/context</code>, <code>/readonly</code>, <code>/mode</code> and <code>/cancel</code>; the last four say themselves whether the guest may act.')}
+
+<h2>Regular Messages</h2>
+<p>Besides commands, you can talk to the bot in a direct message, or in a server channel by mentioning it or replying to it. These are handled as normal conversation messages.</p>
+
+${callout('info', 'Command Registration', 'Commands are registered each time the bot connects: in the server named by <code>guild_id</code>, where they appear at once, or globally, which can take up to an hour to appear.')}
 `
   },
   {
     slug: '/discord/approval',
     section: 'Discord',
     title: 'Approval Flow',
-    description: 'Interactive button components for approving restricted terminal commands in Discord.',
+    description: 'Interactive message buttons for approving commands and actions in Discord.',
     content: () => `
 <h1>Discord Approval Flow</h1>
-<p class="lead">Interactive button components for approving restricted terminal commands in Discord.</p>
+<p class="lead">Interactive message buttons for approving commands and actions in Discord.</p>
 
 <h2>How It Works</h2>
 <ol>
-  <li>The agent requests a terminal command that isn&rsquo;t in the allowed prefixes list (or contains shell operators)</li>
-  <li>An approval message is sent to the Discord channel with interactive buttons</li>
-  <li>The user sees three clickable buttons:</li>
+  <li>The agent wants to run a terminal command (or take another action) that needs your approval. A command runs without asking when you&rsquo;ve already allowed it, or when it&rsquo;s on the safe list and can run confined. Otherwise a quick risk check decides whether it is dangerous enough to ask you about.</li>
+  <li>The approval card is posted in the Discord channel where the work is running, using Discord message buttons. Only an owner can press them.</li>
+  <li>The card shows the command, its risk and any warnings, with these buttons:</li>
 </ol>
 
 <div style="margin: 1.5rem 0; padding: 1rem; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 6px;">
-  <p style="margin-bottom: 0.75rem; color: var(--text-secondary); font-size: 0.85rem;">Command requires approval:</p>
+  <p style="margin-bottom: 0.75rem; color: var(--text-secondary); font-size: 0.85rem;">Approval needed:</p>
   <code style="display: block; margin-bottom: 1rem;">rm -rf /tmp/old-cache</code>
   <div style="display: flex; gap: 0.5rem;">
-    <span style="padding: 0.4rem 0.8rem; background: var(--bg-elevated); border: 1px solid var(--green); border-radius: 4px; font-size: 0.75rem; color: var(--green);">Allow Once</span>
-    <span style="padding: 0.4rem 0.8rem; background: var(--bg-elevated); border: 1px solid var(--cyan); border-radius: 4px; font-size: 0.75rem; color: var(--cyan);">Allow Always</span>
+    <span style="padding: 0.4rem 0.8rem; background: var(--bg-elevated); border: 1px solid var(--green); border-radius: 4px; font-size: 0.75rem; color: var(--green);">Allow</span>
+    <span style="padding: 0.4rem 0.8rem; background: var(--bg-elevated); border: 1px solid var(--cyan); border-radius: 4px; font-size: 0.75rem; color: var(--cyan);">Always allow</span>
     <span style="padding: 0.4rem 0.8rem; background: var(--bg-elevated); border: 1px solid var(--red); border-radius: 4px; font-size: 0.75rem; color: var(--red);">Deny</span>
   </div>
 </div>
@@ -1325,15 +1578,27 @@ ${callout('info', 'Command Registration', 'Slash commands are automatically regi
 <table class="config-table">
 <thead><tr><th>Option</th><th>Behavior</th></tr></thead>
 <tbody>
-<tr><td><strong>Allow Once</strong></td><td>Execute the command this time only</td></tr>
-<tr><td><strong>Allow Always</strong></td><td>Execute and persist the command prefix for future auto-approval</td></tr>
-<tr><td><strong>Deny</strong></td><td>Reject the command &mdash; agent receives denial message</td></tr>
+<tr><td><strong>Allow</strong></td><td>Run it this time only</td></tr>
+<tr><td><strong>Always allow</strong></td><td>Run it and remember the program in the database (per execution target), so you aren&rsquo;t asked again, even after a restart. config.toml is not changed.</td></tr>
+<tr><td><strong>Allow until restart</strong></td><td>Shown instead of <strong>Always allow</strong> for critical commands, or for everything when <code>terminal.permission_mode = "cautious"</code>. The allowance lasts until the daemon restarts.</td></tr>
+<tr><td><strong>Deny</strong></td><td>Refuse &mdash; the agent is told it was denied</td></tr>
 </tbody>
 </table>
+<p>Some actions offer only <strong>Allow</strong> and <strong>Deny</strong>. Cards also cover more than terminal commands, such as browser actions and confirming new scheduled work (<strong>Approve &amp; activate</strong> / <strong>Cancel</strong>).</p>
 
-<p>The approval flow in Discord uses serenity&rsquo;s <code>ComponentInteraction</code> API. &ldquo;Allow Always&rdquo; persists the prefix to SQLite so it survives daemon restarts.</p>
+${callout('info', 'Expiry', 'An unanswered card expires after 5 minutes, with a reminder shortly before, and counts as <strong>Deny</strong>.')}
 
-${callout('info', 'Button Expiry', 'Discord interaction tokens expire after 15 minutes. If no response is received within that window, the approval request times out and the command is denied.')}
+<h2>What Always Asks</h2>
+<ul>
+  <li>Commands from untrusted triggers, such as <a href="/triggers">email</a></li>
+  <li>Commands asking for capabilities beyond the task</li>
+  <li>Commands touching protected credential paths, even if allowed before</li>
+  <li>New commands that would keep running in the background (detached)</li>
+</ul>
+
+${callout('warn', 'Chained Commands', 'A chained command (<code>;</code> <code>|</code> <code>&amp;&amp;</code> <code>||</code>) counts as allowed only if every part&rsquo;s program is on your permanent allow list. An allowance you gave for one session never unlocks a chain. Command substitution (<code>$()</code>, backticks) is never covered by an allowance.')}
+
+${callout('danger', 'Untrusted Sources', 'Sessions started by triggers (like email) are untrusted. Every terminal command in them requires approval, whatever you allowed before.')}
 `
   },
     {
@@ -2227,19 +2492,19 @@ ${callout('warn', 'Audit Only', 'Threat detection is informational — it logs w
     slug: '/triggers',
     section: 'Triggers',
     title: 'Email Triggers',
-    description: 'Monitor email inboxes with IMAP IDLE and trigger the aidaemon agent on new messages automatically.',
+    description: 'Monitor email inboxes with IMAP IDLE and trigger the AIDaemon agent on new messages automatically.',
     content: () => `
 <h1>Email Triggers</h1>
 <p class="lead">Monitor your inbox with IMAP IDLE and trigger the agent on new emails.</p>
 
 <h2>How It Works</h2>
 <ol>
-  <li>aidaemon connects to the configured IMAP server with TLS</li>
+  <li>AIDaemon connects to the configured IMAP server with TLS</li>
   <li>Selects the configured folder (default: INBOX)</li>
   <li>Enters IMAP IDLE mode — a persistent connection that waits for new messages</li>
   <li>When a new email arrives, fetches the envelope (subject, sender)</li>
-  <li>Creates an Event and broadcasts it via the internal event bus</li>
-  <li>The agent processes the event and sends a notification via Telegram</li>
+  <li>Creates an Event and broadcasts it via the internal event bus. The mail text is cleaned and wrapped in a notice telling the agent not to act on it without your approval.</li>
+  <li>The agent handles the event as an untrusted message and sends its reply to the owners&rsquo; chats: the allowed users of your first Telegram, Discord and Slack bots.</li>
 </ol>
 
 <h2>Configuration</h2>
@@ -2247,8 +2512,16 @@ ${codeBlock(`[triggers.email]
 host = "imap.gmail.com"
 port = 993
 username = "you@gmail.com"
-password = "your-app-password"
+password = "keychain"   # or "\${AIDAEMON_EMAIL_PASSWORD}"
 folder = "INBOX"`, 'toml', 'config.toml')}
+
+${configTable([
+  ['host', 'string', '&mdash;', 'IMAP server host name'],
+  ['port', 'integer', '&mdash;', 'IMAP port (usually 993)'],
+  ['username', 'string', '&mdash;', 'Mailbox user name'],
+  ['password', 'string', '&mdash;', 'Mailbox password. Supports <code>"keychain"</code> and <code>$&#123;ENV&#125;</code>.'],
+  ['folder', 'string', 'INBOX', 'Folder to watch'],
+])}
 
 ${callout('warn', 'Gmail App Passwords', 'For Gmail with 2FA, generate an app-specific password at <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener">myaccount.google.com/apppasswords</a>.')}
 
@@ -2260,34 +2533,40 @@ ${codeBlock(`Event {
 }`, 'rust')}
 
 <h2>Event Bus</h2>
-<p>Triggers use a Tokio broadcast channel to deliver events. The agent listens on the receiver end and processes each event as a new message in its own session.</p>
+<p>Triggers use a Tokio broadcast channel to deliver events. The agent listens on the receiver end and processes each event as a new message in its own session. Under heavy load, untrusted trigger events may be dropped rather than queued without limit.</p>
 
-${callout('danger', 'Untrusted Sessions', 'Email trigger sessions are marked as <strong>untrusted</strong>. All terminal commands in these sessions require explicit approval, regardless of the allowed_prefixes whitelist.')}
+${callout('danger', 'Untrusted Sessions', 'Email trigger sessions are marked as <strong>untrusted</strong>. Every terminal command in these sessions requires your approval, whatever you allowed before.')}
 
 <h2>Reconnection</h2>
-<p>If the IMAP connection drops, aidaemon waits 30 seconds and reconnects automatically.</p>
+<p>If the IMAP connection drops, AIDaemon waits 30 seconds and reconnects automatically.</p>
 `
   },
   {
     slug: '/skills',
     section: 'Skills',
     title: 'Skills System',
-    description: 'Dynamic prompt enhancement via markdown files. Skills inject context-specific instructions based on keyword triggers.',
+    description: 'Skills are markdown instructions the agent loads with use_skill when a task needs them, or when you name one.',
     content: () => `
 <h1>Skills System</h1>
-<p class="lead">Dynamic prompt enhancement via markdown files. Skills inject context-specific instructions when triggered by keywords in user messages.</p>
+<p class="lead">Skills are markdown files with instructions for a kind of task. The agent sees a list of available skills and loads the one a task needs with the <code>use_skill</code> tool. You can also ask for a skill by name.</p>
 
 <h2>Configuration</h2>
 ${codeBlock(`[skills]
-dir = "skills"
-enabled = true`, 'toml', 'config.toml')}
+enabled = true
+dir = "skills"      # relative to config.toml's folder
+registries = []     # URLs of skill registry manifests for browse/install`, 'toml', 'config.toml')}
+
+<h2>Where Skills Live</h2>
+<ul>
+  <li><strong>Your skills</strong> &mdash; the skills directory (<code>skills/</code> next to config.toml), as <code>&lt;name&gt;.md</code>, or as a folder <code>&lt;name&gt;/SKILL.md</code> with extra files the agent reads with <code>skill_resources</code></li>
+  <li><strong>Project skills</strong> &mdash; up to 50 skills from the project&rsquo;s <code>.agents/skills/&lt;name&gt;/SKILL.md</code> and <code>.claude/skills/&lt;name&gt;/SKILL.md</code>. They guide only work in that project and grant no extra authority. If a name clashes, your own skill wins.</li>
+</ul>
 
 <h2>Skill File Format</h2>
-<p>Skills are markdown files with YAML-like frontmatter, stored in the skills directory:</p>
+<p>Skills are markdown files with YAML-like frontmatter:</p>
 ${codeBlock(`---
 name: Code Review
 description: Provides code review guidelines
-triggers: review, code review, PR, pull request
 ---
 When reviewing code, follow these guidelines:
 
@@ -2300,40 +2579,29 @@ When reviewing code, follow these guidelines:
 <h2>Frontmatter Fields</h2>
 ${configTable([
   ['name', 'string', '—', 'Display name of the skill'],
-  ['description', 'string', '—', 'Brief description (shown in "Available Skills" list)'],
-  ['triggers', 'string', '—', 'Comma-separated keywords that activate the skill'],
+  ['description', 'string', '—', 'Brief description (shown in the Available Skills list, so the agent knows when the skill fits)'],
+  ['triggers', 'string', '—', 'Optional. Kept for older skills; no longer used to activate a skill.'],
 ])}
 
-<h2>Hybrid Matching</h2>
-<p>Skill activation uses a two-stage process:</p>
+<h2>How Skills Activate</h2>
+<p>A skill is loaded up front only when you name it in your message:</p>
+<ul>
+  <li><code>$skill-name</code></li>
+  <li><code>skill:skill-name</code></li>
+  <li><code>use skill skill-name</code></li>
+  <li>&ldquo;the skill-name skill&rdquo;</li>
+</ul>
+<p>Otherwise the model picks from the Available Skills list and calls <code>use_skill</code> when a skill clearly fits the task. Keywords in your message don&rsquo;t activate skills.</p>
+
+<h2>In the Prompt</h2>
 <ol>
-  <li><strong>Pattern matching</strong> — whole-word, case-insensitive keyword search. If any trigger appears as a complete word in the user&rsquo;s message, the skill is a candidate.</li>
-  <li><strong>LLM confirmation</strong> — the fast model validates whether each candidate skill is actually relevant to the user&rsquo;s intent. This prevents false activations from coincidental keyword matches.</li>
+  <li><strong>Available Skills</strong> — the name and description of every skill, part of the agent&rsquo;s fixed core prompt</li>
+  <li><strong>Loaded skills</strong> — the full body of each skill in use, added to that turn&rsquo;s context. Skill text is sanitized first.</li>
 </ol>
-<p>The confirmation step is <strong>fail-open</strong>: if the LLM call fails or times out, all pattern-matched candidates are activated.</p>
-
-<h2>System Prompt Injection</h2>
-<p>When skills are loaded, the system prompt is enhanced with:</p>
-<ol>
-  <li><strong>Available Skills</strong> — lists all skill names and descriptions</li>
-  <li><strong>Active Skills</strong> — full body of each matched skill</li>
-  <li><strong>Known Facts</strong> — stored facts (injected below skills)</li>
-</ol>
-
-${codeBlock(`## Available Skills
-- Code Review: Provides code review guidelines
-- DevOps: Infrastructure and deployment help
-
-## Active Skill: Code Review
-When reviewing code, follow these guidelines:
-...
-
-## Known Facts
-### user
-- name: David`, 'text', 'system prompt structure')}
+<p>Memory (facts, episodes and so on) has its own section and is not part of the skills block.</p>
 
 <h2>Dynamic Skills</h2>
-<p>Beyond static filesystem skills, aidaemon supports runtime skill management through the <code>manage_skills</code> tool and optional registries.</p>
+<p>Beyond skill files you write yourself, AIDaemon supports runtime skill management through the <code>manage_skills</code> tool and optional registries.</p>
 
 <h3>manage_skills Tool Actions</h3>
 <table class="config-table">
@@ -2343,51 +2611,57 @@ When reviewing code, follow these guidelines:
 <tr><td><code>add_inline</code></td><td>Parse raw markdown content as a skill</td></tr>
 <tr><td><code>list</code></td><td>Show all loaded skills with metadata</td></tr>
 <tr><td><code>remove</code></td><td>Delete a skill by name</td></tr>
+<tr><td><code>remove_all</code></td><td>Delete several skills by name</td></tr>
 <tr><td><code>enable</code> / <code>disable</code></td><td>Activate or deactivate a skill</td></tr>
 <tr><td><code>browse</code></td><td>Search across configured registries</td></tr>
 <tr><td><code>install</code></td><td>Install from a registry</td></tr>
 <tr><td><code>update</code></td><td>Re-fetch skill from source URL</td></tr>
+<tr><td><code>review</code></td><td>Approve or dismiss auto-promoted skill drafts</td></tr>
 </tbody>
 </table>
 
 <h3>Auto-Promotion</h3>
-<p>A background task runs every 12 hours, evaluating frequently-used procedures for automatic promotion into reusable skills.</p>
+<p>A background task runs every 12 hours and turns procedures that worked many times into skill drafts. Drafts stay inactive until you approve them with <code>manage_skills</code> <code>review</code>.</p>
 `
   },
   {
     slug: '/scheduler',
     section: 'Scheduler',
     title: 'Scheduled Tasks',
-    description: 'Create recurring and one-shot scheduled tasks with natural language or cron expressions in aidaemon.',
+    description: 'Reminders and scheduled work in AIDaemon: set_reminder, schedule_task, manage_automations, schedules and time zones.',
     content: () => `
 <h1>Scheduled Tasks</h1>
-<p class="lead">Create recurring and one-shot tasks with natural language or cron expressions. The agent executes the task prompt on schedule.</p>
+<p class="lead">Create recurring and one-time automations in plain words or with cron expressions: reminders that only message you, and scheduled work the agent carries out on its own.</p>
 
 ${callout('info', 'Automations and time zones', 'Ask in plain words and the agent sets it up: <code>set_reminder</code> (a <code>message</code> and a <code>when</code>) for plain reminders, which only message you, and <code>schedule_task</code> for scheduled work. A time or recurring schedule may name an IANA zone (&ldquo;every weekday at 8am Europe/Madrid&rdquo;, &ldquo;2030-07-15 09:00 Asia/Tokyo&rdquo;) and follows its daylight saving; otherwise times are in your own zone. Abbreviations such as &ldquo;EST&rdquo; are refused with a request for the IANA name. A run missed while the daemon was off is recorded as Missed and never counts as a failure.')}
 
-<h2>Tool Name</h2>
-<p><code>scheduler</code></p>
-
-<h2>Actions</h2>
+<h2>Tools</h2>
 <table class="config-table">
-<thead><tr><th>Action</th><th>Required Params</th><th>Description</th></tr></thead>
+<thead><tr><th>Tool</th><th>Purpose</th></tr></thead>
 <tbody>
-<tr><td><code>create</code></td><td>name, schedule, prompt</td><td>Create a new scheduled task</td></tr>
-<tr><td><code>list</code></td><td>—</td><td>List all tasks with status and next run time</td></tr>
-<tr><td><code>delete</code></td><td>id</td><td>Delete a task by UUID</td></tr>
-<tr><td><code>pause</code></td><td>id</td><td>Pause a task (stops firing)</td></tr>
-<tr><td><code>resume</code></td><td>id</td><td>Resume a paused task (recomputes next run)</td></tr>
+<tr><td><code>schedule_task</code></td><td>Scheduled work: <code>task</code> (what each run does), <code>when</code>, and an optional <code>name</code>. You confirm it on an <strong>Approve &amp; activate</strong> card before it starts.</td></tr>
+<tr><td><code>set_reminder</code></td><td>A message only: <code>message</code>, <code>when</code>, and an optional <code>name</code>. Nothing else runs when it fires.</td></tr>
+<tr><td><code>manage_automations</code></td><td>See, change or stop automations (below)</td></tr>
 </tbody>
 </table>
+<p>In chat, <code>/work</code> also shows longer work that waits or runs on its own, and <code>/status</code> shows the next scheduled item.</p>
 
-<h2>Create Parameters</h2>
-${configTable([
-  ['name', 'string', '—', 'Human-readable label for the task'],
-  ['schedule', 'string', '—', 'Natural language or 5-field cron expression'],
-  ['prompt', 'string', '—', 'What the agent should do when the task fires'],
-  ['oneshot', 'bool', 'false', 'Fire once then auto-delete'],
-  ['trusted', 'bool', 'false', 'Run with full autonomy (no terminal approval needed)'],
-])}
+<h2>manage_automations Actions</h2>
+<table class="config-table">
+<thead><tr><th>Action</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>list</code> / <code>show</code></td><td>List automations (scheduled, watching, health checks) or show one by name</td></tr>
+<tr><td><code>history</code></td><td>Past runs, including missed ones</td></tr>
+<tr><td><code>edit</code></td><td>Change <code>when</code>, <code>new_name</code>, <code>snooze_until</code> (move only the next run), or <code>tell_me</code></td></tr>
+<tr><td><code>pause</code> / <code>resume</code> / <code>cancel</code></td><td>Stop firing, start again, or remove (one or several)</td></tr>
+<tr><td><code>run_now</code></td><td>Run scheduled work right away</td></tr>
+<tr><td><code>last_failure</code></td><td>Why the last run failed</td></tr>
+<tr><td><code>set_budget</code></td><td>Token budget per run (<code>budget_per_check</code>) and per day (<code>budget_daily</code>)</td></tr>
+<tr><td><code>update_instructions</code></td><td>Change what later runs do</td></tr>
+<tr><td><code>bind_workspace</code></td><td>Set the project directory its runs work in</td></tr>
+</tbody>
+</table>
+<p><code>tell_me</code> chooses what scheduled work tells you: <code>every_run</code>, only <code>changes</code>, or only <code>problems</code>.</p>
 
 <h2>Natural Language Schedules</h2>
 <p>The scheduler parses common patterns into cron expressions:</p>
@@ -2399,98 +2673,86 @@ ${configTable([
 <tr><td><code>daily</code></td><td><code>0 0 * * *</code></td><td>Every day at midnight</td></tr>
 <tr><td><code>weekly</code></td><td><code>0 0 * * 0</code></td><td>Every Sunday at midnight</td></tr>
 <tr><td><code>monthly</code></td><td><code>0 0 1 * *</code></td><td>First of the month</td></tr>
-<tr><td><code>every 5m</code></td><td><code>*/5 * * * *</code></td><td>Every 5 minutes</td></tr>
-<tr><td><code>every 2h</code></td><td><code>0 */2 * * *</code></td><td>Every 2 hours</td></tr>
+<tr><td><code>every 5m</code></td><td><code>*/5 * * * *</code></td><td>Every 5 minutes (1&ndash;59)</td></tr>
+<tr><td><code>every 2h</code></td><td><code>0 */2 * * *</code></td><td>Every 2 hours (1&ndash;23)</td></tr>
 <tr><td><code>daily at 9am</code></td><td><code>0 9 * * *</code></td><td>Every day at 9:00 AM</td></tr>
+<tr><td><code>daily at 6am, 12pm, 6pm</code></td><td><code>0 6,12,18 * * *</code></td><td>Several times a day (same minute)</td></tr>
 <tr><td><code>daily at 14:30</code></td><td><code>30 14 * * *</code></td><td>Every day at 2:30 PM</td></tr>
 <tr><td><code>weekdays at 8:30</code></td><td><code>30 8 * * 1-5</code></td><td>Mon-Fri at 8:30 AM</td></tr>
 <tr><td><code>weekends at 10am</code></td><td><code>0 10 * * 0,6</code></td><td>Sat-Sun at 10:00 AM</td></tr>
-<tr><td><code>in 2h</code></td><td>(computed absolute)</td><td>One-shot, fires once in 2 hours</td></tr>
-<tr><td><code>in 30m</code></td><td>(computed absolute)</td><td>One-shot, fires once in 30 minutes</td></tr>
+<tr><td><code>Monday and Friday at 9am</code></td><td><code>0 9 * * 1,5</code></td><td>Named days</td></tr>
+<tr><td><code>in 2h</code>, <code>in 30m</code></td><td>(computed absolute)</td><td>One-time, fires once after the delay</td></tr>
+<tr><td><code>today at 6pm</code>, <code>tomorrow at 9am</code></td><td>(computed absolute)</td><td>One-time, at that time</td></tr>
+<tr><td><code>2026-03-14 09:30</code></td><td>(computed absolute)</td><td>One-time, at an exact date and time (RFC 3339 also works)</td></tr>
 </tbody>
 </table>
 
 <p>Standard 5-field cron expressions are also accepted directly (e.g., <code>0 9 * * 1-5</code>).</p>
 
 <h2>Configuration</h2>
-${codeBlock(`[scheduler]
-enabled = true
-tick_interval_secs = 30
-
-[[scheduler.tasks]]
-name = "Morning check-in"
-schedule = "weekdays at 9am"
-prompt = "Check system health and report any issues"
-trusted = true
-
-[[scheduler.tasks]]
-name = "Backup reminder"
-schedule = "weekly"
-prompt = "Remind me to run backups"`, 'toml', 'config.toml')}
+<p>Automations are created by asking in chat (or in the app) and are stored in the database. There is no config.toml section for them; an old <code>[scheduler]</code> section is ignored. The scheduler checks for due runs on the heartbeat, every <code>[heartbeat] tick_interval_secs</code> (default 30).</p>
 
 <h2>Task Storage</h2>
-<p>Tasks are persisted in SQLite (<code>scheduled_tasks</code> table). Config-defined tasks are synced on startup — removed tasks are cleaned up automatically. Tasks created via the tool persist indefinitely.</p>
+<p>Automations are stored in the database as goals with schedules. Rows from the older <code>scheduled_tasks</code> table are migrated automatically.</p>
 
-<h2>Missed Tasks</h2>
-<p>On startup, the scheduler checks for tasks that should have fired while the daemon was down. Missed tasks are fired immediately during recovery.</p>
+<h2>Missed Runs</h2>
+<p>A recurring run that was due while the daemon was off, and is now too late to be useful, is skipped. It is recorded as Missed in History, you get a notice, and the schedule moves on to its next run. A one-time item still runs late.</p>
 
-${callout('warn', 'Trusted vs Untrusted', 'Trusted tasks run with full terminal access (no approval needed). Untrusted tasks (default) require approval for any terminal commands, just like email trigger sessions.')}
+${callout('warn', 'Access of Scheduled Work', 'Scheduled work runs with your access once you approve it on the confirmation card. Terminal commands in those runs don&rsquo;t ask again, but commands that would keep running in the background (detached) are never allowed in them.')}
 `
   },
   {
     slug: '/router',
     section: 'Router',
     title: 'Model Routing',
-    description: 'Automatic model tier routing: Fast, Primary, or Smart. Keyword heuristics and message length classification.',
+    description: 'How AIDaemon picks a model: default, smart and fast models, fallbacks, and /model overrides.',
     content: () => `
 <h1>Model Routing</h1>
-<p class="lead">Automatic tier-based model selection routes each query to the most appropriate model: Fast, Primary, or Smart.</p>
+<p class="lead">How AIDaemon picks a model for each turn: your default model for normal work, a smart model when a turn needs more, a fast model for side jobs, and fallbacks when a call fails.</p>
+
+<h2>Model Settings</h2>
+${codeBlock(`[provider.models]
+default = "claude-sonnet-5-5"
+fallback = ["claude-opus-5-5", "claude-haiku-5-5"]
+
+# Older keys still work:
+# primary = "claude-sonnet-5-5"   # read as default
+# smart = "claude-opus-5-5"
+# fast = "claude-haiku-5-5"`, 'toml', 'config.toml')}
+
+${configTable([
+  ['default', 'string', 'catalog', 'The main model, used for normal requests'],
+  ['fallback', 'array', '[]', 'Models tried in order when a call fails. If unset, smart and fast become the fallbacks.'],
+  ['primary', 'string', '&mdash;', 'Older name for <code>default</code>'],
+  ['smart', 'string', 'catalog', 'The stronger model for turns that need more'],
+  ['fast', 'string', 'catalog', 'The quick, cheap model for side jobs'],
+])}
+<p>For a provider AIDaemon knows, any model you leave out is filled in from its catalog, so an API key alone gives you a default, a fast and a smart model.</p>
 
 <h2>Tiers</h2>
 <table class="config-table">
-<thead><tr><th>Tier</th><th>Use Case</th><th>Typical Model</th></tr></thead>
+<thead><tr><th>Tier</th><th>Use Case</th><th>Catalog Models</th></tr></thead>
 <tbody>
-<tr><td><strong>Fast</strong></td><td>Intent-gate, greetings, yes/no, short lookups</td><td>mistral-small-3.1-24b-instruct, mistral-nemo, gpt-5-nano</td></tr>
-<tr><td><strong>Primary</strong></td><td>General conversation and most tool-enabled tasks</td><td>gpt-5-mini, claude-sonnet-4.5, gemini-3-flash-preview</td></tr>
-<tr><td><strong>Smart</strong></td><td>High-stakes or long-form complex execution</td><td>gpt-5.1, claude-opus-4.6, gemini-3-pro-preview</td></tr>
+<tr><td><strong>Fast</strong></td><td>Background memory work, and helpers started with <code>model_tier: "fast"</code></td><td>gpt-6-luna, claude-haiku-5-5, gemini-3.5-flash-lite</td></tr>
+<tr><td><strong>Primary (default)</strong></td><td>Normal conversation and most tool-using work</td><td>gpt-6-sol, claude-sonnet-5-5, gemini-4-hydrogen</td></tr>
+<tr><td><strong>Smart</strong></td><td>Turns that need more: high-risk tools in play, or a retry after a failed attempt</td><td>gpt-6-sol, claude-opus-5-5, gemini-4-argon</td></tr>
 </tbody>
 </table>
+<p>The catalog models above are for the ChatGPT subscription, Anthropic and Google Gemini. Other providers (OpenAI API, OpenRouter, xAI, DeepSeek, Moonshot) use one model for all tiers unless you set them; DeepSeek uses <code>deepseek-reasoner</code> as its smart model.</p>
 
-<h2>Fast Tier Model Guidance</h2>
-<p>Use a cheap, low-latency, non-reasoning instruct model for <code>provider.models.fast</code>. The fast tier is mostly an intent gate and routing pass, not deep execution.</p>
-<ul>
-  <li><strong>Good fast picks:</strong> <code>mistralai/mistral-small-3.1-24b-instruct</code>, <code>mistralai/mistral-nemo</code>, <code>google/gemma-3-12b-it</code></li>
-  <li><strong>Avoid in fast tier:</strong> heavy reasoning/thinking models that burn extra tokens on classification-only turns</li>
-  <li><strong>If unsure:</strong> start with <code>fast=mistralai/mistral-small-3.1-24b-instruct</code>, <code>primary=openai/gpt-5-mini</code>, <code>smart=openai/gpt-5.1</code></li>
-</ul>
-
-<h2>Classification Rules</h2>
-
-<h3>Smart Tier (complex tasks)</h3>
-<p>A query is classified as Smart if any of these are true:</p>
-<ul>
-  <li>Contains a code fence (<code>\`\`\`</code>)</li>
-  <li>Message length &gt; 500 characters</li>
-  <li>Contains 3+ question marks</li>
-  <li>Contains keywords: <em>implement, refactor, debug, analyze, step by step, write code, architecture, optimize, algorithm, explain how, write a, build a, create a function, design, compare and contrast, walk me through, troubleshoot, review this, fix this, rewrite</em></li>
-</ul>
-
-<h3>Fast Tier (simple queries)</h3>
-<p>A query is classified as Fast if any of these are true:</p>
-<ul>
-  <li>Exact match greetings/acknowledgments: <em>hi, hello, hey, thanks, ok, yes, no, sure, bye, goodbye, ty, cool, nice, great, awesome, lol, haha, wow</em> (case insensitive)</li>
-  <li>Single word message</li>
-  <li>Short message: &lt;20 chars AND &le;3 words</li>
-  <li>Simple lookup prefix (<em>what is, who is, define, when is, where is</em>) + &le;6 total words</li>
-</ul>
-
-<h3>Primary Tier (default)</h3>
-<p>Everything else falls to the Primary tier.</p>
+<h2>How a Model Is Chosen</h2>
+<ol>
+  <li>A model picked for this conversation in the app wins.</li>
+  <li>Then a model set with <code>/model</code>.</li>
+  <li>If your default model is a frontier model (Claude, GPT-4 and later, Gemini 2.5 and later, Grok 3 and later, or OpenAI&rsquo;s o-series), every turn uses it. Override this with <code>[policy] trust_tier = "guided"</code> or <code>"autonomous"</code>.</li>
+  <li>Otherwise each turn uses the default model, and switches to the smart model when the tools in play carry high risk or the last attempt failed right away.</li>
+</ol>
+<p>Your message&rsquo;s wording, length or keywords play no part in the choice. The fast model is never put in front of your messages; it runs side jobs such as memory extraction, and helpers the agent starts with <code>model_tier: "fast"</code>. The fallback models are tried, in order, when a call fails.</p>
 
 <h2>Disabling Auto-Routing</h2>
 <ul>
-  <li>If all three model tiers are the same, routing is automatically disabled</li>
-  <li>Sending <code>/model &lt;name&gt;</code> in Telegram disables routing (manual override)</li>
+  <li>If all the models are the same, routing is automatically disabled</li>
+  <li>Sending <code>/model &lt;name&gt;</code> in any chat (Telegram, Slack, Discord) sets one model for all chats and turns routing off</li>
   <li>Sending <code>/auto</code> re-enables automatic routing</li>
 </ul>
 `
@@ -2499,31 +2761,37 @@ ${callout('warn', 'Trusted vs Untrusted', 'Trusted tasks run with full terminal 
     slug: '/cost-tracking',
     section: 'Cost Tracking',
     title: 'Token Usage & Budgets',
-    description: 'Track token consumption per model and session. Set daily budgets and check stats via /cost command.',
+    description: 'Track token usage per model and session, set per-request and per-automation token budgets, and check stats with /cost.',
     content: () => `
 <h1>Token Usage &amp; Cost Tracking</h1>
-<p class="lead">Track token consumption per model and session. Set daily budgets to control spending. Check stats from Telegram with <code>/cost</code>.</p>
+<p class="lead">Track token consumption per model and session, and keep spending in check with per-request and per-automation token budgets. Check stats from any chat with <code>/cost</code>.</p>
 
 <h2>How It Works</h2>
 <ol>
-  <li>Every LLM call records input and output tokens to the <code>token_usage</code> SQLite table</li>
-  <li>Each record includes: model name, session ID, token counts, and timestamp</li>
-  <li>Optionally, set a daily token budget that blocks LLM calls once exceeded</li>
-  <li>Budget resets automatically at midnight UTC</li>
+  <li>Every model call records input and output tokens to the <code>token_usage</code> SQLite table</li>
+  <li>Each record includes: model name, session ID, token counts (including cached input), and timestamp</li>
+  <li>There is no global daily cap. Each request has a token budget, shared by the turn and every helper it starts</li>
+  <li>Automations can also have their own per-run and per-day budgets</li>
 </ol>
 
 <h2>Configuration</h2>
 ${configTable([
-  ['daily_token_budget', 'integer', 'null', 'Maximum total tokens (input + output) per day. Null = unlimited.'],
+  ['subagents.task_token_budget', 'integer', '500000', 'Tokens one request may use across the turn and its helpers. <code>0</code> = unlimited.'],
+  ['state.daily_token_budget', 'integer', 'null', 'Ignored. Kept so older configs still load; setting it logs a warning.'],
 ])}
 
-${codeBlock(`[state]
-daily_token_budget = 1000000  # 1M tokens per day`, 'toml', 'config.toml')}
+${codeBlock(`[subagents]
+task_token_budget = 500000   # per request; 0 = unlimited`, 'toml', 'config.toml')}
 
-${callout('info', 'Budget Scope', 'The daily budget is global — it counts all tokens across all sessions and models. When exceeded, LLM calls return an error until midnight UTC.')}
+<p>You get a warning at 80% of the budget. A run that is still making progress can extend its budget up to 3 times, never past 2,000,000 tokens; otherwise the agent sums up and stops.</p>
 
-<h2>Telegram /cost Command</h2>
-<p>Send <code>/cost</code> in Telegram to view usage statistics:</p>
+<h2>Automation Budgets</h2>
+<p>Scheduled work can have its own budgets, set with <code>manage_automations</code> <code>set_budget</code>: <code>budget_per_check</code> (tokens per run) and <code>budget_daily</code> (tokens per day). Daily counters reset every 24 hours. When a run has its own budget, the per-request budget doesn&rsquo;t apply on top of it.</p>
+
+${callout('info', 'Capping Total Spend', 'AIDaemon does not enforce a global daily token cap. To cap total spend, set a limit at your provider. The app&rsquo;s Providers settings show what each account has used and has left where the provider reports it: a ChatGPT plan&rsquo;s rolling limits, an OpenRouter key&rsquo;s balance.')}
+
+<h2>The /cost Command</h2>
+<p>Send <code>/cost</code> in any chat (<code>!cost</code> in Slack) to view usage statistics. It is owner-only.</p>
 ${codeBlock(`Token usage (last 24h):
   Input:  12,450 tokens
   Output: 8,230 tokens
@@ -2533,8 +2801,9 @@ Token usage (last 7d):
   Output: 52,180 tokens
 
 Top models (7d):
-  gemini-3-flash-preview: 98,400 tokens
-  gemini-3-pro-preview: 41,100 tokens`, 'text')}
+  claude-sonnet-5-5: 98,400 tokens
+  claude-haiku-5-5: 41,100 tokens`, 'text')}
+<p>The top five models of the last 7 days are listed.</p>
 
 <h2>Database Schema</h2>
 ${configTable([
@@ -2543,13 +2812,16 @@ ${configTable([
   ['model', 'TEXT', '—', 'Which LLM model was used'],
   ['input_tokens', 'INTEGER', '—', 'Tokens sent to the model'],
   ['output_tokens', 'INTEGER', '—', 'Tokens generated by the model'],
+  ['cached_input_tokens', 'INTEGER', 'null', 'Input tokens served from the provider&rsquo;s prompt cache'],
+  ['cache_creation_input_tokens', 'INTEGER', 'null', 'Input tokens written to the prompt cache'],
+  ['call_id', 'TEXT', 'null', 'The model call this record belongs to'],
   ['created_at', 'TEXT', 'now', 'UTC timestamp of the call'],
 ])}
 
 <h2>What&rsquo;s Tracked</h2>
 <ul>
-  <li>Input tokens (context + user message) per LLM call</li>
-  <li>Output tokens (model response) per LLM call</li>
+  <li>Input tokens (context + user message) per model call, and how many came from the prompt cache</li>
+  <li>Output tokens (model response) per model call</li>
   <li>Model name for per-model breakdowns</li>
   <li>Session ID for per-user tracking</li>
   <li>Timestamp for time-windowed queries (24h, 7d)</li>
