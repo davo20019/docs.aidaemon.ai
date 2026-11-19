@@ -96,9 +96,10 @@ Health ───> GET /health (axum)`, 'text', 'architecture')}
   <li><a href="/telegram">Telegram</a> — bot setup, commands, approval flow</li>
   <li><a href="/slack">Slack</a> — workspace integration via Socket Mode</li>
   <li><a href="/discord">Discord</a> — bot setup, slash commands, approval buttons</li>
-  <li><a href="/event-sourcing">Event Sourcing</a> — immutable events and consolidation</li>
-  <li><a href="/plans">Plans (Legacy)</a> — old planning system notes for older installs</li>
-  <li><a href="/health-monitoring">Health Monitoring</a> — service probes and alerting</li>
+  <li><a href="/architecture">How AIDaemon Works</a> — from message to reply: kernel, hooks, limits, closeout</li>
+  <li><a href="/event-sourcing">Event Sourcing</a> — the append-only event log and what is built from it</li>
+  <li><a href="/plans">Plans &amp; Checklists</a> — how a request is declared and judged done</li>
+  <li><a href="/health-monitoring">Health Monitoring</a> — the /health endpoint, watchdogs and service probes</li>
 </ul>
 `
   },
@@ -2920,211 +2921,198 @@ ${configTable([
   {
     slug: '/architecture',
     section: 'Architecture',
-    title: 'Agent Loop & Error Recovery',
-    description: 'The aidaemon agentic loop: message handling, LLM calls, tool execution, stall detection, and error recovery.',
+    title: 'How AIDaemon Works',
+    description: 'How a message becomes a reply: channels, the turn engine on the aidaemon-core kernel, the hook chain, model failover, receipts and closeout.',
     content: () => `
-<h1>Agent Loop &amp; Error Recovery</h1>
-<p class="lead">The core agentic loop: receive message, call LLM, execute tools, iterate, respond.</p>
+<h1>How AIDaemon Works</h1>
+<p class="lead">A message arrives on a channel, becomes a <em>turn</em>, runs on a small agent kernel until the work is done or a limit stops it, and the reply goes back where it came from. This page follows that path.</p>
 
-<h2>Agent Loop Flow</h2>
+<h2>The pieces</h2>
+<table class="config-table">
+<thead><tr><th>Piece</th><th>Code</th><th>What it does</th></tr></thead>
+<tbody>
+<tr><td><strong>Channels</strong></td><td><code>crates/aidaemon-channel-telegram</code>, <code>-slack</code>, <code>-discord</code>, <code>crates/aidaemon-client-gateway</code> (the app)</td><td>Receive messages, check who is allowed to talk, show status, approvals and replies</td></tr>
+<tr><td><strong>Turn runner</strong></td><td><code>crates/aidaemon-channels</code></td><td>One queue per session: cancel words, deduplication, the inactivity watchdog, live status and reply delivery, the same on every platform</td></tr>
+<tr><td><strong>Agent and turn engine</strong></td><td><code>crates/aidaemon-runtime</code> (<code>agent/</code>, <code>turn/</code>, <code>engine/</code>)</td><td>Prepares a turn, runs it on the kernel, judges whether it is done</td></tr>
+<tr><td><strong>Kernel</strong></td><td><code>crates/aidaemon-core</code></td><td>The loop itself: model call, tool calls, hooks, receipts, limits, stuck detection, interrupt and resume</td></tr>
+<tr><td><strong>Providers</strong></td><td><code>crates/aidaemon-providers</code></td><td>OpenAI-compatible, Anthropic, Gemini and ChatGPT-subscription backends, model routing</td></tr>
+<tr><td><strong>Tools</strong></td><td><code>src/tools</code>, <code>crates/aidaemon-tools</code> and others</td><td>What the model can call; each declares its effects and how far to trust its output</td></tr>
+<tr><td><strong>Event store</strong></td><td><code>crates/aidaemon-events</code></td><td>Append-only history of every turn, and the run ledger built from it (see <a href="/event-sourcing">Event Sourcing</a>)</td></tr>
+<tr><td><strong>Work</strong></td><td><code>crates/aidaemon-work</code></td><td>Goals, tasks, schedules, automations, checklists, health probes</td></tr>
+<tr><td><strong>Memory</strong></td><td><code>crates/aidaemon-memory</code></td><td>Facts, episodes, procedures, people, project notes</td></tr>
+<tr><td><strong>Heartbeat</strong></td><td><code>crates/aidaemon-runtime</code> (<code>heartbeat</code>)</td><td>Runs the background jobs: scheduled goals, memory learning, retention, cleanup</td></tr>
+</tbody>
+</table>
+
+<h2>From message to reply</h2>
 <ol>
-  <li><strong>Persist user message</strong> — stored with importance score</li>
-  <li><strong>Auto-route model</strong> — classify query complexity (if not overridden)</li>
-  <li><strong>Build system prompt</strong> — base prompt + matched skills + known facts</li>
-  <li><strong>Retrieve context</strong> — tri-hybrid memory retrieval</li>
-  <li><strong>Iterate</strong> (up to <code>max_iterations</code>):
+  <li><strong>Receive.</strong> The channel authorizes the sender and tags the message with their role (owner, guest or public) and the channel's visibility (private chat, internal or public).</li>
+  <li><strong>Queue.</strong> The turn runner queues it behind any turn already running in that session and shows a working indicator.</li>
+  <li><strong>Prepare the turn.</strong>
     <ul>
-      <li>Collect pinned old memories + recent messages (deduplicated)</li>
-      <li>Build OpenAI-format message list</li>
-      <li>Call LLM with error-classified recovery</li>
-      <li>If tool calls → execute each, persist results, continue loop</li>
-      <li>If no tool calls OR final iteration → return text response</li>
+      <li>The user message is saved as an event; its id is the turn id.</li>
+      <li>A task starts.</li>
+      <li>AIDaemon works out what this turn may do from explicit facts only: the sender's role, the channel, the session mode (for example <code>/readonly</code>), config and any workspace grant. It then offers only the tools that this allows.</li>
+      <li>It picks the model.</li>
+      <li>It builds the system prompt: identity and persona, matching skills, known facts, project instructions (<code>AGENTS.md</code> / <code>CLAUDE.md</code>) and what the session is doing right now.</li>
     </ul>
   </li>
-  <li><strong>Max iterations reached</strong> → return timeout message</li>
+  <li><strong>Run on the kernel.</strong> The kernel calls the model. If the model asks for tools, it runs them and calls the model again. If it doesn't, the kernel asks the stop hooks whether the answer can stand.</li>
+  <li><strong>Close out.</strong> The run ledger checks the turn's receipts against what the request needed, and checks the reply's shape. The task ends as <code>succeeded</code>, <code>partial</code> or <code>failed</code>.</li>
+  <li><strong>Deliver.</strong> The reply goes back to the channel and its delivery is recorded. Learning from the turn happens later, in the background.</li>
 </ol>
 
-<h2>Dynamic Iteration Budget</h2>
-<p>The agent has a built-in <code>request_more_iterations</code> tool that extends the loop budget when the current limit is insufficient:</p>
-<ul>
-  <li>Extends budget by <strong>10 iterations</strong> per call</li>
-  <li>Hard cap prevents unlimited extension (typically 25 total)</li>
-  <li>Requires a <code>reason</code> parameter explaining what remains to be done</li>
-  <li>Used when the agent has a clear plan but would otherwise run out of iterations mid-task</li>
-</ul>
+<h2>The kernel loop</h2>
+<p>Each pass builds the request, calls the model and runs the tool calls it asked for. Read-only calls run side by side; calls that change something run one at a time. Every call ends with a <strong>receipt</strong>: <code>succeeded</code>, <code>failed</code>, <code>denied</code>, <code>timed_out</code>, <code>cancelled</code>, <code>skipped</code>, <code>unknown_tool</code>, <code>invalid_arguments</code>, <code>indeterminate</code> (the process stopped mid-call) or <code>answered</code> (a hook answered for the tool). Receipts, not the model's words, are what count as work done.</p>
+<p>For the owner's own turns, only core tools are sent with every model call. The rest are listed by name and loaded when the model asks for them with <code>load_tools</code>.</p>
 
-<h2>Error Recovery Strategy</h2>
-<p>The <code>call_llm_with_recovery</code> method classifies errors and responds accordingly:</p>
-
-<table class="config-table">
-<thead><tr><th>Error Type</th><th>Strategy</th></tr></thead>
-<tbody>
-<tr><td><strong>Auth / Billing</strong></td><td>Return immediately to user — no retry</td></tr>
-<tr><td><strong>Rate Limit</strong></td><td>Wait <code>retry_after_secs</code> (capped at 60s), retry once</td></tr>
-<tr><td><strong>Timeout / Network / Server Error</strong></td><td>Wait 2s, retry once; on failure, fall back to previous model</td></tr>
-<tr><td><strong>Not Found (bad model)</strong></td><td>Immediately switch to fallback model</td></tr>
-<tr><td><strong>Unknown</strong></td><td>Propagate as error</td></tr>
-</tbody>
-</table>
-
-${callout('info', 'Last Known Good', 'After every successful LLM call, the current config is saved as <code>config.toml.lastgood</code>. This enables automatic recovery from bad config changes.')}
-
-<h2>Message Ordering Fixup</h2>
-<p>To satisfy constraints across Gemini, Anthropic, and OpenAI providers, aidaemon runs a three-pass fixup on the message history before each LLM call:</p>
+<h2>One hook chain judges every tool call</h2>
+<p>Every safeguard is a kernel hook that judges a call's declared effects. Tools never ask the owner or refuse on policy themselves. The order is fixed:</p>
 <ol>
-  <li><strong>Pass 1:</strong> Merge consecutive same-role messages (combines tool_calls arrays)</li>
-  <li><strong>Pass 2:</strong> Drop orphaned tool results (no matching assistant tool_call) and strip orphaned tool_calls (no matching tool result)</li>
-  <li><strong>Pass 3:</strong> Merge again after orphan removal may create new consecutive same-role messages</li>
+  <li>Canonical form of the call (so every later hook judges the call that will actually run)</li>
+  <li>Authority: is this tool, path and access level allowed for this turn?</li>
+  <li>Same-tool streak guard, run-ledger stop, token budget, stuck notice</li>
+  <li>Memory hooks</li>
+  <li>Protected paths, network guard, outbound secret scan</li>
+  <li>Untrusted content: after the turn has read something the owner did not write, calls that send data out go through a separate check</li>
+  <li>Owner approval (last, so the owner is only asked about calls everything else allows)</li>
+  <li>Dispatch, and coordination with the other agents working on the same request</li>
 </ol>
 
-<h2>Tool Execution</h2>
-<p>During the loop, each tool call receives:</p>
-<ul>
-  <li><code>_session_id</code> — injected automatically for session tracking</li>
-  <li><code>_untrusted_source</code> — flag set for trigger-originated sessions</li>
-</ul>
-
-<h2>Stall &amp; Repetition Detection</h2>
-<p>The agent loop includes safeguards against getting stuck:</p>
-<ul>
-  <li><strong>Stall detection</strong> &mdash; if the same tool is called 3+ times consecutively with similar arguments, the loop breaks</li>
-  <li><strong>Repetition detection</strong> &mdash; detects repeated response text and forces a break</li>
-  <li><strong>Hard iteration limit</strong> &mdash; default 10, extendable to 25 via <code>request_more_iterations</code></li>
-</ul>
-
-<h2>Session Types</h2>
+<h2>Limits</h2>
+<p>Work is bounded by progress and cost, never by how long it takes.</p>
 <table class="config-table">
-<thead><tr><th>Session Type</th><th>Format</th><th>Trusted</th></tr></thead>
+<thead><tr><th>Limit</th><th>Default</th><th>Notes</th></tr></thead>
 <tbody>
-<tr><td>Telegram chat</td><td>Chat ID as string</td><td>Yes</td></tr>
-<tr><td>Slack channel</td><td><code>slack:{channel_id}</code> or <code>slack:{channel_id}:{thread_ts}</code></td><td>Yes</td></tr>
-<tr><td>Discord channel</td><td><code>discord:{channel_id}</code></td><td>Yes</td></tr>
-<tr><td>Email trigger</td><td><code>email_trigger</code></td><td>No</td></tr>
-<tr><td>Event trigger</td><td><code>event_{uuid}</code></td><td>No</td></tr>
-<tr><td>Sub-agent</td><td><code>sub-{depth}-{uuid}</code></td><td>Inherited</td></tr>
+<tr><td>Model turns per run</td><td>150</td><td>A backstop; the kernel's hard cap is 1,000</td></tr>
+<tr><td>Token budget per request</td><td>500,000</td><td><code>[subagents] task_token_budget</code>, shared by the request and every sub-agent it starts. While work keeps succeeding it grows on its own up to 3 times, never past 2,000,000; after that the owner decides. <code>0</code> turns it off</td></tr>
+<tr><td>Same tool in a row</td><td>8</td><td>16 for general-purpose tools, 40 for step-by-step tools such as computer use</td></tr>
+<tr><td>Stuck detection</td><td>3 repeats</td><td>The same call with the same result 3 times, the same tool failing 3 times, or A/B/A/B ping-pong over 6 calls. The model gets a nudge; after 2 nudges the run stops</td></tr>
+<tr><td>Inactivity</td><td>300 s</td><td><code>[daemon.watchdog]</code>: a turn that stops making progress is cancelled. Each model call has its own 300 s timeout</td></tr>
 </tbody>
 </table>
+
+<h2>Choosing the model and recovering from errors</h2>
+<p>A conversation's pinned model wins, then a daemon-wide <code>/model</code>. A sub-agent keeps the model it was spawned with. Otherwise the turn uses the primary model; the router picks a tier only for models not trusted to work autonomously.</p>
+<p>Each model call runs a failover chain: the chosen model, then the router's other models, then each configured failover provider's models.</p>
+<table class="config-table">
+<thead><tr><th>Error</th><th>What happens</th></tr></thead>
+<tbody>
+<tr><td><strong>Rate limit, timeout, network, server error</strong></td><td>Retries with backoff (honoring <code>retry_after</code>), then the next model</td></tr>
+<tr><td><strong>Bad request</strong></td><td>Retry once without media, once with default options, then the next model</td></tr>
+<tr><td><strong>Billing</strong></td><td>Retry once with a smaller output cap, then skip that model for 10 minutes</td></tr>
+<tr><td><strong>Auth or used-up quota</strong></td><td>Move to the next provider; the quota and its reset time are what gets reported if everything fails</td></tr>
+<tr><td><strong>Model not found, unknown error</strong></td><td>Next model</td></tr>
+<tr><td><strong>Context too long</strong></td><td>Stop the chain; the turn compacts its history and calls again</td></tr>
+</tbody>
+</table>
+
+${callout('info', 'Last Known Good', 'After every successful model call, the current config is copied to <code>config.toml.lastgood</code>. If <code>config.toml</code> later fails to load, AIDaemon tries <code>.lastgood</code>, then <code>.bak</code>, <code>.bak.1</code> and <code>.bak.2</code>.')}
+
+<h2>When is a turn done?</h2>
+<p><strong>Evidence beats contract.</strong></p>
+<ul>
+  <li>Before it changes or sends anything, the model declares what the request needs with <code>track_requirements</code> (see <a href="/plans">Plans &amp; Checklists</a>).</li>
+  <li>Each item is closed only by a matching receipt. While an item is open and some allowed tool could still do it, the run ledger may send the model back for more work, at most 2 extra passes.</li>
+  <li>A run whose receipts all succeeded closes as <code>succeeded</code>, even when the plan could not describe the work.</li>
+  <li>An item the model defers, skips or drops lets the run stop, but the task ends <code>partial</code>, never <code>succeeded</code>. The same goes for a model that reports <code>partial</code> or <code>blocked</code>, and for a request a policy refused.</li>
+</ul>
+<p>A few other checks can also ask for one more pass, each with its own budget:</p>
+<ul>
+  <li>The reply is empty, internal text or pasted tool output.</li>
+  <li>The run changed code and ran no build or test.</li>
+  <li>Several agents changed files and no one has checked the result.</li>
+  <li>A GUI click was never verified.</li>
+  <li>A mandate decision was not recorded.</li>
+</ul>
+
+<h2>Message ordering fixup</h2>
+<p>Before each model call, the history is fixed up so every provider accepts it:</p>
+<ol>
+  <li>Merge consecutive same-role messages.</li>
+  <li>Drop tool results with no matching tool call, and tool calls with no result.</li>
+  <li>Merge again.</li>
+  <li>Make sure the history starts with a user or system message.</li>
+</ol>
+<p>A run that outgrows the model's context window is compacted.</p>
+
+<h2>Sessions</h2>
+<table class="config-table">
+<thead><tr><th>Source</th><th>Session id</th></tr></thead>
+<tbody>
+<tr><td>Telegram</td><td><code>{bot}:{chat_id}</code></td></tr>
+<tr><td>Slack</td><td><code>slack:{channel_id}</code> or <code>slack:{channel_id}:{thread_ts}</code></td></tr>
+<tr><td>Discord</td><td><code>discord:ch:{channel_id}</code> or <code>discord:dm:{user_id}</code>, prefixed with <code>{bot}:</code> for a named bot</td></tr>
+<tr><td>Email trigger</td><td><code>email_trigger</code></td></tr>
+<tr><td>Sub-agent</td><td>Derived from the parent session</td></tr>
+</tbody>
+</table>
+<p>Trust does not come from the session id. It comes from the sender's role, the channel's visibility and what the turn has read: content the owner did not write (web pages, trigger input, other people's messages, MCP results) marks the turn as untrusted.</p>
+
+<h2>Restarts</h2>
+<p>The kernel checkpoints each run in the same database (<code>run_events</code>, <code>run_states</code>). If AIDaemon stops in the middle of a chat turn, that turn gets one continuation after the restart. It is told which calls were running and may or may not have taken effect, and none of them is run again. Background sub-agents do not survive a restart; their chats are told.</p>
 `
   },
   {
     slug: '/architecture/state',
     section: 'Architecture',
-    title: 'State Management & Memory',
-    description: 'SQLite-backed persistence with semantic search via embeddings, tri-hybrid retrieval, and memory layers.',
+    title: 'Storage & State',
+    description: 'One SQLite database, encrypted by default: which crate owns which tables, the working-memory cache, long-term memory, retention and backups.',
     content: () => `
-<h1>State Management &amp; Memory</h1>
-<p class="lead">SQLite-backed persistence with in-memory working memory, semantic search via embeddings, and tri-hybrid retrieval.</p>
+<h1>Storage &amp; State</h1>
+<p class="lead">Everything AIDaemon keeps is in one SQLite file, encrypted at rest by default. Each domain crate owns its own tables in that file.</p>
 
-${callout('info', 'v0.9.x update', 'Canonical conversation persistence is now the <code>events</code> table. Legacy <code>messages</code> data is migrated into events during upgrade.')}
-
-<h2>Database Schema</h2>
-
-<h3>messages table</h3>
-${configTable([
-  ['id', 'TEXT PK', '—', 'UUID primary key'],
-  ['session_id', 'TEXT', '—', 'Session identifier (indexed)'],
-  ['role', 'TEXT', '—', 'user, assistant, or tool'],
-  ['content', 'TEXT', 'null', 'Message text content'],
-  ['tool_call_id', 'TEXT', 'null', 'ID for tool result messages'],
-  ['tool_name', 'TEXT', 'null', 'Tool name for tool messages'],
-  ['tool_calls_json', 'TEXT', 'null', 'JSON array of tool calls'],
-  ['created_at', 'TEXT', '—', 'RFC3339 timestamp'],
-  ['importance', 'REAL', '0.5', 'Importance score (0.0–1.0)'],
-  ['embedding', 'BLOB', 'null', 'JSON-encoded Vec&lt;f32&gt; embedding'],
-  ['embedding_error', 'TEXT', 'null', 'Error message if embedding failed'],
-  ['consolidated_at', 'TEXT', 'null', 'Memory consolidation timestamp'],
-])}
-
-<h3>facts table</h3>
-${configTable([
-  ['id', 'INTEGER PK', 'auto', 'Auto-incrementing primary key'],
-  ['category', 'TEXT', '—', 'Grouping category'],
-  ['key', 'TEXT', '—', 'Fact key (unique per category)'],
-  ['value', 'TEXT', '—', 'Fact content'],
-  ['source', 'TEXT', '""', 'Who stored it: "agent" or "user"'],
-  ['created_at', 'TEXT', '—', 'RFC3339 timestamp'],
-  ['updated_at', 'TEXT', '—', 'RFC3339 timestamp'],
-])}
-
-<h3>macros table</h3>
-${configTable([
-  ['id', 'INTEGER PK', 'auto', 'Auto-incrementing primary key'],
-  ['trigger_tool', 'TEXT', '&mdash;', 'Tool that triggers the macro'],
-  ['trigger_args_pattern', 'TEXT', 'null', 'Arguments pattern to match'],
-  ['next_tool', 'TEXT', '&mdash;', 'Tool to chain next'],
-  ['next_args', 'TEXT', '&mdash;', 'Arguments for the chained tool'],
-  ['confidence', 'REAL', '0.0', 'Confidence score for the macro'],
-  ['used_count', 'INTEGER', '0', 'Number of times the macro has been used'],
-  ['created_at', 'TEXT', '&mdash;', 'RFC3339 timestamp'],
-  ['updated_at', 'TEXT', '&mdash;', 'RFC3339 timestamp'],
-])}
-
-<h3>scheduled_tasks table</h3>
-${configTable([
-  ['id', 'TEXT PK', '—', 'UUID primary key'],
-  ['name', 'TEXT', '—', 'Human-readable task label'],
-  ['cron_expr', 'TEXT', '—', 'Computed 5-field cron expression'],
-  ['original_schedule', 'TEXT', '—', 'User input (natural language or cron)'],
-  ['prompt', 'TEXT', '—', 'Agent prompt to execute on schedule'],
-  ['source', 'TEXT', '—', '"tool" (created via tool) or "config" (from config.toml)'],
-  ['is_oneshot', 'INTEGER', '0', 'Fire once then auto-delete'],
-  ['is_paused', 'INTEGER', '0', 'Paused tasks do not fire'],
-  ['is_trusted', 'INTEGER', '0', 'Trusted tasks skip terminal approval'],
-  ['next_run_at', 'TEXT', '—', 'RFC3339 timestamp of next scheduled run'],
-  ['last_run_at', 'TEXT', 'null', 'RFC3339 timestamp of last execution'],
-  ['created_at', 'TEXT', '—', 'RFC3339 timestamp'],
-  ['updated_at', 'TEXT', '—', 'RFC3339 timestamp'],
-])}
-
-<h3>terminal_allowed_prefixes table</h3>
-${configTable([
-  ['prefix', 'TEXT PK', '—', 'Command prefix persisted from "Allow Always" approvals'],
-])}
-
-<h2>Working Memory</h2>
-<p>An in-memory <code>HashMap&lt;String, VecDeque&lt;Message&gt;&gt;</code> per session, capped at <code>working_memory_cap</code> (default 50). Avoids database hits for recent conversation history.</p>
-
-<h2>Tri-Hybrid Retrieval</h2>
-<p>The <code>get_context</code> method combines three retrieval strategies:</p>
-
-<table class="config-table">
-<thead><tr><th>Strategy</th><th>Source</th><th>Limit</th><th>Purpose</th></tr></thead>
-<tbody>
-<tr><td><strong>Recency</strong></td><td>Last N messages</td><td>10</td><td>Conversational continuity</td></tr>
-<tr><td><strong>Salience</strong></td><td>importance &ge; 0.8</td><td>5</td><td>Critical flagged memories</td></tr>
-<tr><td><strong>Relevance</strong></td><td>Vector similarity &gt; 0.65</td><td>5</td><td>Semantic search via embeddings</td></tr>
-</tbody>
-</table>
-
-<p>Results are deduplicated by message ID before being included in context.</p>
-
-<h2>Embedding Service</h2>
+<h2>The database</h2>
 <ul>
-  <li><strong>Model:</strong> AllMiniLML6V2 (via fastembed)</li>
-  <li>Runs in background — embeds new messages after they are appended</li>
-  <li>Enables the relevance leg of tri-hybrid retrieval</li>
+  <li><strong>File:</strong> <code>[state] db_path</code> (default <code>aidaemon.db</code>).</li>
+  <li><strong>Encryption:</strong> SQLCipher, built in by default. If no key exists, one is generated into <code>.env</code>, and an existing plaintext database is migrated automatically. <code>AIDAEMON_ALLOW_PLAINTEXT_DB=1</code> is an emergency bypass.</li>
+  <li><strong>Mode:</strong> WAL journal and a pool of 10 connections sharing one page cache (<code>[state] sqlite_cache_mib</code>, default 64).</li>
+  <li><strong>Backups on upgrade:</strong> when a new version starts on an existing database, it first writes a consistent copy to <code>backups/</code> next to it and keeps the newest <code>[state] upgrade_backups</code> (default 2; <code>0</code> turns this off).</li>
 </ul>
 
-<h2>Memory Consolidation</h2>
-<p>A background task runs every <code>consolidation_interval_hours</code> (default 6). It compresses old conversations into summaries using the fast model, reducing storage and context window usage.</p>
-
-<h2>Importance Scoring</h2>
+<h2>Who owns which tables</h2>
 <table class="config-table">
-<thead><tr><th>Role</th><th>Default Score</th></tr></thead>
+<thead><tr><th>Area</th><th>Main tables</th><th>Owner</th></tr></thead>
 <tbody>
-<tr><td>User message</td><td>0.5</td></tr>
-<tr><td>Assistant response</td><td>0.5</td></tr>
-<tr><td>Tool output</td><td>0.3</td></tr>
-<tr><td>System message</td><td>0.1</td></tr>
+<tr><td>Conversation and task history</td><td><code>events</code>, <code>task_lifecycle</code>, <code>session_context_boundaries</code>, <code>history_message_index</code> / <code>history_message_fts</code> (search)</td><td><code>aidaemon-events</code>, <code>aidaemon-runtime</code></td></tr>
+<tr><td>Kernel run checkpoints</td><td><code>run_events</code>, <code>run_states</code></td><td><code>aidaemon-store-sqlite</code></td></tr>
+<tr><td>Goals, tasks, schedules, mandates, checklists</td><td><code>goals</code>, <code>tasks</code>, <code>goal_schedules</code>, <code>goal_runs</code>, <code>mandates</code>, <code>task_plans</code>, <code>notification_queue</code></td><td><code>aidaemon-work</code></td></tr>
+<tr><td>Long-term memory</td><td><code>facts</code>, <code>episodes</code>, <code>procedures</code>, <code>error_solutions</code>, <code>people</code>, <code>person_facts</code>, <code>memory_*</code></td><td><code>aidaemon-memory</code></td></tr>
+<tr><td>Health probes</td><td><code>health_probes</code>, <code>probe_results</code>, <code>probe_alerts</code></td><td><code>aidaemon-work</code> (only with <code>[health] enabled</code>)</td></tr>
+<tr><td>Terminal approvals</td><td><code>terminal_backend_allowed_prefixes</code>, <code>terminal_capability_grants</code></td><td><code>aidaemon-runtime</code></td></tr>
+<tr><td>Token use</td><td><code>token_usage</code>, <code>token_usage_daily</code></td><td><code>aidaemon-runtime</code></td></tr>
+<tr><td>Runtime config</td><td><code>settings</code>, <code>dynamic_bots</code>, <code>dynamic_mcp_servers</code>, <code>dynamic_skills</code>, <code>oauth_connections</code></td><td><code>aidaemon-runtime</code></td></tr>
+<tr><td>App clients</td><td><code>client_events</code>, <code>client_devices</code>, <code>client_pairing</code></td><td><code>aidaemon-store-sqlite</code></td></tr>
 </tbody>
 </table>
+<p>Older databases are upgraded at startup: the old <code>messages</code> table moves into <code>events</code>, and the old <code>scheduled_tasks</code> table moves into goals and goal schedules. Both old tables are then dropped.</p>
 
-<h2>Connection Pool</h2>
+<h2>Conversation history</h2>
+<p>The <code>events</code> table is the one record of a conversation (see <a href="/event-sourcing">Event Sourcing</a>). Each session's recent messages are also cached in memory, capped at <code>[state] working_memory_cap</code> (default 50) and refilled from events after a restart. <code>/clear</code> records a boundary so later turns start fresh without deleting anything; <code>/wipe</code> really deletes the session's history.</p>
+
+<h2>Long-term memory</h2>
+<p>With the default <code>[memory] backend = "daemon"</code>, memory lives in the same database:</p>
 <ul>
-  <li>SQLite pool: max 5 connections</li>
-  <li>Journal mode: WAL (Write-Ahead Logging) for concurrent reads</li>
-  <li>Auto-creates database and tables if missing</li>
+  <li>Facts, with older versions superseded rather than overwritten.</li>
+  <li>Episodes summarizing past sessions.</li>
+  <li>Procedures and error solutions learned from finished work.</li>
+  <li>People.</li>
 </ul>
+<p>Recall ranks by meaning, words, freshness, confidence and source. The most recent facts, up to <code>[state] max_facts</code> (default 20), go into the system prompt. Embeddings are computed locally with fastembed (<code>[memory] embedding_model</code>, default <code>AllMiniLML6V2Q</code>); changing the model re-embeds memory in the background. Notes from conversations placed in a project are kept as files under <code>~/.aidaemon/projects</code>, apart from personal memory. Background memory jobs run every <code>[state] consolidation_interval_hours</code> (default 6). See <a href="/tools/memory">Memory</a>.</p>
+
+<h2>Retention</h2>
+<p>A daily job removes old rows under <code>[state.retention]</code>. Each value is in days; <code>0</code> keeps rows forever. Only history that memory has already learned from is ever deleted.</p>
+${configTable([
+  ['messages_days', 'integer', '90', 'Conversation events (task start/end, user and assistant messages)'],
+  ['diagnostic_events_days', 'integer', '7', 'Tool, model-call and other diagnostic events'],
+  ['superseded_facts_days', 'integer', '90', 'Old versions of facts'],
+  ['token_usage_aggregate_days', 'integer', '30', 'Raw token rows, rolled into daily totals first'],
+  ['episodes_days', 'integer', '365', 'Episodes never recalled'],
+  ['behavior_patterns_days', 'integer', '90', 'Patterns at the confidence floor'],
+  ['goals_days', 'integer', '180', 'Completed or abandoned goals'],
+  ['procedures_days', 'integer', '180', 'Procedures that never succeeded'],
+  ['error_solutions_days', 'integer', '90', 'Error solutions that did more harm than good'],
+])}
 `
   },
   {
@@ -3199,113 +3187,170 @@ ${callout('warning', 'Prevent macOS Sleep', 'macOS may suspend background proces
 <h2>Health Check</h2>
 <p>Once running as a service, verify with:</p>
 ${codeBlock(`curl http://127.0.0.1:8080/health
-# {"status": "ok"}`, 'bash')}
+# {"status": "ok", "components": {"database": {...}, "provider": {...}}}`, 'bash')}
 
-<p>The health endpoint is served by axum on the configured <code>daemon.health_bind:daemon.health_port</code>.</p>
+<p>The health endpoint is served on <code>[daemon] health_bind</code>:<code>health_port</code> (default <code>127.0.0.1:8080</code>). It answers <code>200</code> with <code>"ok"</code>, or <code>503</code> with <code>"degraded"</code> when the database does not answer or the model provider is unavailable. See <a href="/health-monitoring">Health Monitoring</a> for the full response.</p>
 `
   },
   {
     slug: '/event-sourcing',
     section: 'Event Sourcing',
     title: 'Event System',
-    description: 'Immutable event log for all agent actions. Daily consolidation into facts and procedures. Session context.',
+    description: 'The append-only events table: what AIDaemon records, the run ledger built from it, and how learning and retention use it.',
     content: () => `
 <h1>Event Sourcing</h1>
-<p class="lead">Every agent action is recorded as an immutable event. Events are the single source of truth for what happened during a session.</p>
+<p class="lead">Every turn is recorded as an append-only sequence of events in the <code>events</code> table. The conversation history, the task's outcome and the ledger that judges whether work was done are all read from these events.</p>
 
-<h2>Event Types</h2>
-<p>The system tracks 16 event types across 6 categories:</p>
-
+<h2>What is recorded</h2>
 <table class="config-table">
-<thead><tr><th>Category</th><th>Event Type</th><th>Description</th></tr></thead>
+<thead><tr><th>Group</th><th>Event types</th></tr></thead>
 <tbody>
-<tr><td rowspan="2"><strong>Session</strong></td><td><code>SessionStart</code></td><td>New conversation session begins</td></tr>
-<tr><td><code>SessionEnd</code></td><td>Session terminated</td></tr>
-<tr><td rowspan="2"><strong>Conversation</strong></td><td><code>UserMessage</code></td><td>User sends a message</td></tr>
-<tr><td><code>AssistantResponse</code></td><td>Agent sends a response</td></tr>
-<tr><td rowspan="2"><strong>Tools</strong></td><td><code>ToolCall</code></td><td>Agent invokes a tool</td></tr>
-<tr><td><code>ToolResult</code></td><td>Tool execution completes</td></tr>
-<tr><td><strong>Thinking</strong></td><td><code>ThinkingStart</code></td><td>Agent begins reasoning</td></tr>
-<tr><td rowspan="2"><strong>Tasks</strong></td><td><code>TaskStart</code></td><td>Agent begins a task</td></tr>
-<tr><td><code>TaskEnd</code></td><td>Task completes (with status)</td></tr>
-<tr><td><strong>Errors</strong></td><td><code>Error</code></td><td>Error occurs during processing</td></tr>
-<tr><td rowspan="2"><strong>Sub-Agents</strong></td><td><code>SubAgentSpawn</code></td><td>Sub-agent is spawned</td></tr>
-<tr><td><code>SubAgentComplete</code></td><td>Sub-agent finishes</td></tr>
-<tr><td rowspan="3"><strong>Approvals</strong></td><td><code>ApprovalRequested</code></td><td>Command approval request sent</td></tr>
-<tr><td><code>ApprovalGranted</code></td><td>User approved a command</td></tr>
-<tr><td><code>ApprovalDenied</code></td><td>User denied a command</td></tr>
+<tr><td><strong>Conversation</strong></td><td><code>user_message</code>, <code>assistant_response</code>, <code>response_delivery</code> (the reply's progress through the channel)</td></tr>
+<tr><td><strong>Tasks</strong></td><td><code>task_start</code>, <code>task_end</code> (status and outcome)</td></tr>
+<tr><td><strong>Tools</strong></td><td><code>tool_call</code>, <code>tool_result</code></td></tr>
+<tr><td><strong>Model calls</strong></td><td><code>llm_call</code> (latency and token telemetry)</td></tr>
+<tr><td><strong>Completion</strong></td><td><code>task_contract_compiled</code>, <code>executor_expectations_declared</code> (the model's checklist), <code>background_continuation_linked</code></td></tr>
+<tr><td><strong>Policy and diagnostics</strong></td><td><code>policy_decision</code>, <code>decision_point</code>, <code>policy_metrics_snapshot</code>, <code>memory_policy_compiled</code>, <code>user_constraint_violation</code>, <code>thinking_start</code>, <code>error</code></td></tr>
+<tr><td><strong>Waiting on a person</strong></td><td><code>interaction_requested</code>, <code>interaction_resolved</code>, <code>approval_requested</code>, <code>approval_granted</code>, <code>approval_denied</code></td></tr>
+<tr><td><strong>Resources</strong></td><td><code>resource_registered</code>, <code>resource_invalidated</code></td></tr>
+<tr><td><strong>File checkpoints</strong></td><td><code>checkpoint_created</code>, <code>checkpoint_finalized</code>, <code>checkpoint_skipped</code>, <code>rollback_started</code>, <code>rollback_completed</code>, <code>rollback_failed</code></td></tr>
+<tr><td><strong>Sub-agents</strong></td><td><code>sub_agent_spawn</code>, <code>sub_agent_complete</code></td></tr>
+<tr><td><strong>Sessions</strong></td><td><code>session_start</code>, <code>session_end</code></td></tr>
 </tbody>
 </table>
 
-<h2>Event Structure</h2>
-${codeBlock(`struct Event {
-    id: i64,              // Auto-incrementing ID
-    session_id: String,   // Session identifier
-    event_type: EventType,// One of the 16 types above
-    data: JsonValue,      // Event-specific payload
-    created_at: DateTime, // Timestamp
-    consolidated_at: Option<DateTime>, // When processed
-    task_id: Option<String>,   // Associated goal/task run
-    tool_name: Option<String>, // For tool events
-}`, 'rust')}
+<h2>Event structure</h2>
+${codeBlock(`CREATE TABLE events (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id      TEXT NOT NULL,
+    event_type      TEXT NOT NULL,  -- snake_case, e.g. "tool_result"
+    data            TEXT NOT NULL,  -- JSON payload for that type
+    created_at      TEXT NOT NULL,
+    consolidated_at TEXT,           -- set once learning has used it
+    task_id         TEXT,           -- the request this event belongs to
+    tool_name       TEXT,           -- for tool events
+    turn_id         TEXT            -- id of the user message that opened the turn
+)`, 'sql')}
 
-<h2>Daily Consolidation</h2>
-<p>A background task runs at <strong>3:00 AM UTC</strong> daily and processes unconsolidated events:</p>
-<ol>
-  <li><strong>Fact extraction</strong> &mdash; the LLM analyzes event sequences to extract durable facts</li>
-  <li><strong>Procedure learning</strong> &mdash; repeated tool-call patterns are captured as procedures</li>
-  <li><strong>Error solution tracking</strong> &mdash; errors and their resolutions are paired for future debugging</li>
-</ol>
-<p>After processing, events are marked with a <code>consolidated_at</code> timestamp.</p>
+<h2>What is built from events</h2>
+<ul>
+  <li><strong>Conversation history.</strong> The messages a model sees are read from events, grouped by turn. A full-text index (<code>history_message_fts</code>) lets the agent search past conversations; an hourly job repairs it.</li>
+  <li><strong>Task lifecycle.</strong> <code>task_lifecycle</code> keeps one row per task (running or terminal) and is updated in the same write as the event. That way a task can only end once, even when a watchdog, a cancel and the normal close race each other. A job every minute closes tasks that started and never ended.</li>
+  <li><strong>The run ledger.</strong> The run aggregate is rebuilt from a task's events: its obligations, its receipts and its verdict (<code>succeeded</code>, succeeded by evidence, closed by a policy refusal, <code>failed</code> or pending). Rebuilding it from the same events always gives the same answer.</li>
+  <li><strong>Session context.</strong> A summary of what the session is doing (running task, recent tools, errors, approvals, sub-agents) goes into the system prompt.</li>
+</ul>
+<p>The kernel also keeps its own per-run journal (<code>run_events</code>, <code>run_states</code>) so an interrupted run can be settled after a restart.</p>
 
-<h2>Session Context</h2>
-<p>The event system provides a session summary for LLM context that includes tools used, errors encountered, approvals granted/denied, and sub-agent activity.</p>
+<h2>Learning from events</h2>
+<p>Every <code>[state] consolidation_interval_hours</code> (default 6), the memory jobs learn from finished sessions' events: procedures from tool sequences that worked, error solutions, expertise and failure patterns. A daily pass does the same for any session with unlearned events older than 7 days. Sessions that are isolated, or tasks whose policy forbids automatic memory, are marked as handled without being learned from. Either way the events get a <code>consolidated_at</code> time, which makes them eligible for retention.</p>
 
-<h2>Event Pruning</h2>
-<p>A background task runs at <strong>3:30 AM UTC</strong> and removes events older than the retention period (default 30 days).</p>
+<h2>Retention</h2>
+<p>Only the daily retention job deletes events, and only events already marked <code>consolidated_at</code>. Conversation events (task start/end, user and assistant messages) are kept 90 days (<code>[state.retention] messages_days</code>). Tool, model-call and diagnostic events are kept 7 days (<code>diagnostic_events_days</code>). <code>0</code> keeps them forever. <code>/wipe</code> deletes a session's events immediately.</p>
 
-${callout('info', 'Immutability', 'Events are append-only. The <code>consolidated_at</code> field is the only field ever updated after creation.')}
+${callout('info', 'Append-only', 'Events are never rewritten except for <code>consolidated_at</code> and annotations added to a user message. Retention and <code>/wipe</code> are the only deletions.')}
 `
   },
   {
     slug: '/plans',
     section: 'Plans',
-    title: 'Plans (Legacy)',
-    description: 'Legacy reference for old plan-based execution. Current aidaemon versions use goals and tasks.',
+    title: 'Plans & Checklists',
+    description: 'How AIDaemon declares what a request needs with track_requirements, how receipts close each item, and how the checklist decides whether a task succeeded.',
     content: () => `
-<h1>Plans (Legacy)</h1>
-<p class="lead">This page is for older setups. Current aidaemon versions run work with goals and tasks.</p>
+<h1>Plans &amp; Checklists</h1>
+<p class="lead">Before it changes or sends anything, the agent writes down what the request needs as a checklist. Each item is ticked only by the result of a real tool call, and the checklist decides whether the request counts as done.</p>
 
-${callout('warning', 'v0.9.x update', 'Plans are no longer the main execution path. aidaemon now breaks work into goals and tasks.')}
-
-<h2>Use these pages now</h2>
+<h2>The checklist tool</h2>
+<p>The model calls <code>track_requirements</code> before its first operation whenever a request:</p>
 <ul>
-  <li><a href="/tools">Tools</a> — how work is run in the current system</li>
-  <li><a href="/scheduler">Scheduled Tasks</a> — recurring or one-time automation</li>
-  <li><a href="/event-sourcing">Event Sourcing</a> — full history of what happened</li>
+  <li>changes a file, a remote system, a deployment, a schedule or a setting, or</li>
+  <li>sends or publishes something.</li>
+</ul>
+<p>A request with several operations or targets gets one item for each. Every call passes the full list, which replaces the previous one. If you change or cancel part of the work mid-run, the agent passes a revised list.</p>
+<table class="config-table">
+<thead><tr><th>Item field</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td><code>text</code></td><td>The requirement, written for you to read (for example, naming the folder it creates)</td></tr>
+<tr><td><code>status</code></td><td><code>pending</code>, <code>in_progress</code>, <code>completed</code>, <code>skipped</code>, <code>failed</code>, <code>deferred</code> or <code>background</code> (a background job will finish it)</td></tr>
+<tr><td><code>depends_on</code></td><td>Indices of items that must come first</td></tr>
+<tr><td><code>owner_units</code></td><td>Which numbered parts of your request this item carries out</td></tr>
+<tr><td><code>mutation_effects</code></td><td>What kind of change proves it, such as <code>local_workspace_write</code>, <code>repository_write</code>, <code>remote_deploy</code> or <code>external_delivery</code></td></tr>
+<tr><td><code>requires_observation</code></td><td>A read or verification proves it</td></tr>
+<tr><td><code>targets</code></td><td>The exact paths, URLs or resource ids involved</td></tr>
+</tbody>
+</table>
+<p>The call can also carry the model's verdict, <code>outcome</code>: <code>done</code>, <code>partial</code>, <code>blocked</code>, <code>needs_owner</code> (the work waits on your answer) or <code>nothing_new</code> (a scheduled run found nothing changed). With <code>partial</code> or <code>blocked</code>, <code>short_of</code> can say which machine resource ran out (disk space, Docker disk space or memory).</p>
+
+<h2>How items are closed</h2>
+<ul>
+  <li>An item with effects, targets or an observation is closed by the receipt of the tool call that did it, never by the model ticking it.</li>
+  <li>Only items with none of those are marked <code>completed</code> by hand.</li>
+  <li>While a reachable item is open, the run may be sent back for more work.</li>
+  <li>An item marked <code>skipped</code>, <code>failed</code> or <code>deferred</code>, or dropped from the list, lets the run stop, but it is reported as not done. The task then ends <code>partial</code>, never <code>succeeded</code>.</li>
+  <li>A model verdict of <code>partial</code> or <code>blocked</code> caps the task at <code>partial</code>. Receipts can downgrade a claimed <code>done</code>; nothing upgrades the other two.</li>
+</ul>
+<p>Editing the checklist never turns work that did not happen into work that did.</p>
+
+<h2>Where it shows and where it is kept</h2>
+<ul>
+  <li><strong>Status card.</strong> The checklist appears on the live status card in your chat and in the app, including background items that are still running.</li>
+  <li><strong>Storage.</strong> It is saved in the <code>task_plans</code> table, so a task's checklist survives a restart.</li>
+  <li><strong>Learning.</strong> Finished checklists from the last day feed memory's procedure learning.</li>
 </ul>
 
-<h2>When this page matters</h2>
-<p>If you still run an older release that uses plans, this page remains as a legacy reference.</p>
+<h2>Goals, schedules and automations</h2>
+<p>Longer-lived work (goals with tasks, scheduled runs, mandates that watch an objective) lives in <code>aidaemon-work</code>. See <a href="/scheduler">Scheduled Tasks</a> and <a href="/tools/sub-agents">Sub-agents</a>.</p>
 `
   },
   {
     slug: '/health-monitoring',
     section: 'Health Monitoring',
-    title: 'Service Probes',
-    description: 'Define HTTP, TCP, command, and file health probes for your services with alerting and trend tracking.',
+    title: 'Health Monitoring',
+    description: 'AIDaemon\'s /health endpoint, its watchdogs, and HTTP, TCP, command and file probes for your services with down, recovery and latency alerts.',
     content: () => `
 <h1>Health Monitoring</h1>
-<p class="lead">Define health probes for your services and get alerted when something breaks.</p>
+<p class="lead">AIDaemon reports its own health on a local endpoint, and can watch your services with health probes that alert you when they break.</p>
 
-<h2>Probe Types</h2>
+<h2>AIDaemon's own health</h2>
+${codeBlock(`curl http://127.0.0.1:8080/health`, 'bash')}
+${codeBlock(`{
+  "status": "ok",
+  "components": {
+    "database": { "status": "ready" },
+    "provider": {
+      "status": "ready",
+      "last_call_at": "2026-11-19T15:02:11Z",
+      "consecutive_failures": 0,
+      "failure_kind": null,
+      "provider_status": null
+    }
+  }
+}`, 'json')}
+<ul>
+  <li><strong>Response codes:</strong> <code>200</code> with <code>"ok"</code> when the database answers and the model provider is not unavailable; otherwise <code>503</code> with <code>"degraded"</code>.</li>
+  <li><strong>No model call:</strong> provider status is read from recent model calls, not from a new request. <code>provider.status</code> is <code>ready</code>, <code>recovering</code> (the last call failed), <code>stale</code> (no call in 15 minutes), <code>unknown</code> (no calls yet) or <code>unavailable</code>.</li>
+  <li><strong>When it counts as unavailable:</strong> the latest call within 15 minutes failed on auth, billing or a used-up quota, or 3 or more calls in a row failed.</li>
+  <li><strong>Address:</strong> served on <code>[daemon] health_bind</code>:<code>health_port</code> (default <code>127.0.0.1:8080</code>). With <code>[daemon] dashboard_enabled</code> (the default) the same server also handles OAuth callbacks.</li>
+</ul>
+
+<h2>Watchdogs</h2>
+${configTable([
+  ['stale_threshold_secs', 'integer', '300', 'A turn whose loop stops ticking this long is cancelled as hung'],
+  ['task_inactivity_timeout_secs', 'integer', '300', 'A task with no tool or model activity this long is treated as hung'],
+  ['llm_call_timeout_secs', 'integer', '300', 'Timeout for one model call'],
+  ['background_stall_secs', 'integer', '120', 'A background command making no progress (CPU, I/O, output) this long may be stopped'],
+  ['background_max_runtime_secs', 'integer', '0', 'Optional cap on a background command; 0 means none'],
+])}
+<p>These live under <code>[daemon.watchdog]</code>. Nothing is limited by elapsed time alone; work that keeps making progress keeps running.</p>
+
+<h2>Service probes</h2>
+<p>Probes are off by default. Turn them on with <code>[health] enabled = true</code>.</p>
 <table class="config-table">
-<thead><tr><th>Type</th><th>Target Format</th><th>What It Checks</th></tr></thead>
+<thead><tr><th>Type</th><th>Target</th><th>Healthy when</th></tr></thead>
 <tbody>
-<tr><td><code>http</code></td><td>URL</td><td>HTTP status code, response body, latency</td></tr>
-<tr><td><code>port</code></td><td>host:port</td><td>TCP connectivity</td></tr>
-<tr><td><code>command</code></td><td>Shell command</td><td>Exit code matches expected (default: 0)</td></tr>
-<tr><td><code>file</code></td><td>File path</td><td>File exists and is not older than max_age_secs</td></tr>
+<tr><td><code>http</code></td><td>URL</td><td>Status matches <code>expected_status</code> (default 200) and the body contains <code>expected_body</code> if set; latency is recorded</td></tr>
+<tr><td><code>port</code></td><td><code>host:port</code></td><td>A TCP connection opens</td></tr>
+<tr><td><code>command</code></td><td>Shell command (run with <code>sh -c</code>)</td><td>Exit code matches <code>expected_exit_code</code> (default 0)</td></tr>
+<tr><td><code>file</code></td><td>File path</td><td>The file exists and is newer than <code>max_age_secs</code> if set</td></tr>
 </tbody>
 </table>
 
@@ -3317,38 +3362,46 @@ result_retention_days = 7
 
 [[health.probes]]
 name = "API Server"
-probe_type = "http"
+type = "http"
 target = "https://api.example.com/health"
 schedule = "every 5m"
 consecutive_failures_alert = 3
 latency_threshold_ms = 2000
-alert_session_ids = ["123456789"]
+config = { expected_status = 200, timeout_secs = 10 }
 
 [[health.probes]]
 name = "Database"
-probe_type = "port"
+type = "port"
 target = "localhost:5432"
 schedule = "every 1m"`, 'toml', 'config.toml')}
+<p><code>schedule</code> takes the same forms as scheduled tasks (<code>every 5m</code>, <code>daily at 9am</code>, or a 5-field cron). Probes from config are kept in sync by name: remove one from the file and it is removed from the database.</p>
 
-<h2>HTTP Probe Options</h2>
+<h3>Probe options (<code>config</code>)</h3>
 ${configTable([
-  ['timeout_secs', 'integer', '10', 'Request timeout in seconds'],
-  ['expected_status', 'integer', '200', 'Expected HTTP status code'],
-  ['expected_body', 'string', 'null', 'Expected substring in response body'],
-  ['method', 'string', '"GET"', 'HTTP method'],
-  ['headers', 'object', '{}', 'Custom HTTP headers'],
+  ['timeout_secs', 'integer', '10', 'Timeout in seconds'],
+  ['expected_status', 'integer', '200', 'HTTP: expected status code'],
+  ['expected_body', 'string', 'null', 'HTTP: text the body must contain'],
+  ['method', 'string', '"GET"', 'HTTP: method'],
+  ['headers', 'table', '{}', 'HTTP: extra headers'],
+  ['expected_exit_code', 'integer', '0', 'Command: expected exit code'],
+  ['max_age_secs', 'integer', 'null', 'File: maximum age'],
 ])}
 
-<h2>Alerting</h2>
-<p>When a probe fails <code>consecutive_failures_alert</code> times in a row, an alert is sent to all session IDs in <code>alert_session_ids</code>.</p>
-
-<h2>Background Tasks</h2>
+<h2>Alerts</h2>
 <ul>
-  <li><strong>Tick loop</strong> &mdash; runs every <code>tick_interval_secs</code> (default 30), executes due probes</li>
-  <li><strong>Cleanup</strong> &mdash; runs at <strong>3:40 AM UTC</strong>, removes old results</li>
+  <li><strong>Down:</strong> after <code>consecutive_failures_alert</code> failures in a row (default 3).</li>
+  <li><strong>Recovered:</strong> when a probe that was down passes again.</li>
+  <li><strong>Slow:</strong> when latency is over <code>latency_threshold_ms</code>, at most once every 5 minutes.</li>
+</ul>
+<p>Alerts go to <code>alert_session_ids</code>, or to your own chats when it is empty. A Telegram session id looks like <code>mybot:123456789</code>.</p>
+
+<h2>Background tasks</h2>
+<ul>
+  <li><strong>Tick loop:</strong> every <code>tick_interval_secs</code> (default 30), runs the probes that are due.</li>
+  <li><strong>Cleanup:</strong> daily at 3:40 AM UTC, removes results older than <code>result_retention_days</code>.</li>
 </ul>
 
-${callout('info', 'Dynamic Probes', 'Probes can also be created at runtime by the agent via the <code>health_probe</code> tool.')}
+${callout('info', 'Probes at runtime', 'With probes on, the agent can create, list, run and check probes with the <code>health_probe</code> tool (actions <code>create</code>, <code>list</code>, <code>run_now</code>, <code>status</code>). Probes also show as automations in <code>manage_automations</code>, where they can be paused or cancelled, and in the app\'s System area with background jobs and queues.')}
 `
   },
   {
