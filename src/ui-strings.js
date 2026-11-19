@@ -39,6 +39,7 @@ export const uiStrings = {
     // Section names (used in sidebar and breadcrumbs)
     sections: {
       'Getting Started': 'Getting Started',
+      'App': 'App',
       'Configuration': 'Configuration',
       'Telegram': 'Telegram',
       'Slack': 'Slack',
@@ -81,6 +82,7 @@ export const uiStrings = {
     notFoundLink: 'Volver a la documentación',
     sections: {
       'Getting Started': 'Primeros Pasos',
+      'App': 'App',
       'Configuration': 'Configuración',
       'Telegram': 'Telegram',
       'Slack': 'Slack',
@@ -123,6 +125,7 @@ export const uiStrings = {
     notFoundLink: 'Zurück zur Dokumentation',
     sections: {
       'Getting Started': 'Erste Schritte',
+      'App': 'App',
       'Configuration': 'Konfiguration',
       'Telegram': 'Telegram',
       'Slack': 'Slack',
@@ -165,6 +168,7 @@ export const uiStrings = {
     notFoundLink: 'Voltar à documentação',
     sections: {
       'Getting Started': 'Primeiros Passos',
+      'App': 'App',
       'Configuration': 'Configuração',
       'Telegram': 'Telegram',
       'Slack': 'Slack',
@@ -207,6 +211,7 @@ export const uiStrings = {
     notFoundLink: 'Retour à la documentation',
     sections: {
       'Getting Started': 'Premiers Pas',
+      'App': 'App',
       'Configuration': 'Configuration',
       'Telegram': 'Telegram',
       'Slack': 'Slack',

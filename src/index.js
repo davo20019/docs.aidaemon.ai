@@ -79,11 +79,15 @@ export default {
       if (slug === '/') slug = '/';
     }
 
-    // A locale without its own copy of a page serves the English one
-    // (the SDK guide is English only for now).
+    // A locale without its own copy of a page serves the English one, in
+    // the English page order (the SDK guide, the app pages and the install
+    // pages are English only for now).
     const localePages = allPages[lang];
     const pages = localePages && lang !== 'en'
-      ? [...localePages, ...allPages.en.filter(p => !localePages.some(q => q.slug === p.slug))]
+      ? [
+          ...allPages.en.map(p => localePages.find(q => q.slug === p.slug) || p),
+          ...localePages.filter(q => !allPages.en.some(p => p.slug === q.slug)),
+        ]
       : localePages;
     const ui = uiStrings[lang];
 

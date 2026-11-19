@@ -9,15 +9,20 @@ const pages = [
     description: 'Documentation for aidaemon, an open-source personal AI agent daemon. Chat via Telegram, Slack, or Discord. Extend with MCP, use any LLM.',
     content: () => `
 <h1><span class="ai">AI</span>daemon</h1>
-<p class="lead">A personal AI agent that runs as a daemon. Always on, always learning. Chat from Telegram, extend with MCP, powered by any LLM.</p>
+<p class="lead">A personal AI agent that runs as a daemon. Always on, always learning. Chat from the AIdaemon app or Telegram, Slack and Discord, extend with MCP, powered by any LLM.</p>
 
-<p>aidaemon is a self-hosted AI agent written in Rust that runs as a background service on your machine. It connects to any OpenAI-compatible LLM provider, communicates via Telegram, Slack, or Discord, and can execute tools, manage its own configuration, remember facts, browse the web, and spawn sub-agents — all autonomously.</p>
+${callout('success', 'New here?', 'Start with <a href="/getting-started/build">Install</a>: download the app for macOS, Windows or Linux and open it. Current version: <strong>0.21.0</strong>.')}
+
+<p>aidaemon is a self-hosted AI agent written in Rust that runs as a background service on your machine. It connects to ChatGPT, Anthropic, Gemini, xAI or any OpenAI-compatible LLM provider, communicates through its own app (desktop, web and terminal) and via Telegram, Slack, or Discord, and can execute tools, manage its own configuration, remember facts, browse the web, and spawn sub-agents — all autonomously.</p>
 
 <h2>Key Features</h2>
 <ul>
+  <li><strong>The AIdaemon app</strong> — one app for desktop, web and terminal: streaming replies, Read aloud, approvals, settings and usage. See <a href="/app">The AIdaemon App</a></li>
+  <li><strong>Live views</strong> — watch the agent's browser and take over when it needs a sign-in</li>
+  <li><strong>Coding agents</strong> — Claude Code, Codex, Antigravity and any Agent Client Protocol agent, in a permission mode you choose</li>
   <li><strong>Daemon architecture</strong> — runs as systemd/launchd service, always available</li>
   <li><strong>Multi-channel</strong> — chat via Telegram, Slack, or Discord, multi-user access control</li>
-  <li><strong>Agentic tool use</strong> — autonomous multi-step reasoning with up to 10 iterations</li>
+  <li><strong>Agentic tool use</strong> — autonomous multi-step reasoning with approvals for side effects</li>
   <li><strong>MCP integration</strong> — extend with any Model Context Protocol server</li>
   <li><strong>Persistent memory</strong> — SQLite-backed history with semantic search via embeddings</li>
   <li><strong>Multi-model routing</strong> — automatic Fast/Primary/Smart tier selection</li>
@@ -28,11 +33,11 @@ const pages = [
   <li><strong>Browser automation</strong> — Chrome with persistent login sessions, screenshots, and form filling</li>
   <li><strong>Web research</strong> — built-in web search (DuckDuckGo/Brave) and URL fetching</li>
   <li><strong>Sub-agent spawning</strong> — recursive agent delegation for complex tasks</li>
-  <li><strong>CLI agent delegation</strong> — delegate to Claude, Gemini, Codex, Aider, etc.</li>
+  <li><strong>CLI agent delegation</strong> — delegate to Claude Code, Codex, Antigravity, Gemini, Copilot, Aider, or any ACP agent</li>
   <li><strong>Scheduled tasks</strong> — cron-style recurring tasks with natural language parsing</li>
   <li><strong>File transfer</strong> — send and receive files via Telegram with path security</li>
   <li><strong>Secrets management</strong> — OS keychain and environment variable support</li>
-  <li><strong>Token cost tracking</strong> — per-model usage stats, daily budgets, /cost command</li>
+  <li><strong>Token cost tracking</strong> — per-model usage stats, /cost command, plan limits and balances in Settings</li>
   <li><strong>Event sourcing</strong> — immutable event log with daily consolidation into facts and procedures</li>
   <li><strong>Goals + tasks</strong> — break bigger work into trackable tasks and keep progress moving</li>
   <li><strong>Health monitoring</strong> — HTTP, TCP, command, and file probes with alerting</li>
@@ -84,7 +89,8 @@ Health ───> GET /health (axum)`, 'text', 'architecture')}
 
 <h2>Quick Links</h2>
 <ul>
-  <li><a href="/getting-started">Getting Started</a> — build and run aidaemon</li>
+  <li><a href="/getting-started/build">Install</a> — download the app for macOS, Windows or Linux</li>
+  <li><a href="/app">The AIdaemon App</a> — chat, approvals, live views, settings</li>
   <li><a href="/configuration">Configuration Reference</a> — full config.toml documentation</li>
   <li><a href="/tools">Tools</a> — built-in and extensible tool system</li>
   <li><a href="/telegram">Telegram</a> — bot setup, commands, approval flow</li>
@@ -100,135 +106,262 @@ Health ───> GET /health (axum)`, 'text', 'architecture')}
     slug: '/getting-started',
     section: 'Getting Started',
     title: 'Overview',
-    description: 'Build aidaemon from source, run the setup wizard, and have your personal AI agent running in minutes.',
+    description: 'Get AIdaemon running on your computer: download the app, open it, connect a model, and start chatting.',
     content: () => `
 <h1>Getting Started</h1>
-<p class="lead">Build aidaemon from source, run the setup wizard, and have your personal AI agent running in minutes.</p>
+<p class="lead">Download the AIdaemon app, open it, connect a model, and start chatting. No terminal needed on macOS or Windows.</p>
 
-<h2>Requirements</h2>
+<p>The current version is <strong>0.21.0</strong>.</p>
+
+<h2>What you need</h2>
 <ul>
-  <li><strong>Rust toolchain</strong> — install via <a href="https://rustup.rs" target="_blank" rel="noopener">rustup.rs</a></li>
-  <li><strong>SQLite</strong> — typically pre-installed on macOS/Linux</li>
-  <li><strong>Telegram bot token</strong> — create via <a href="https://t.me/BotFather" target="_blank" rel="noopener">@BotFather</a></li>
-  <li><strong>LLM API key</strong> — from Google AI Studio, OpenAI, Anthropic, OpenRouter, Moonshot, MiniMax, or use local Ollama</li>
+  <li><strong>A computer</strong> &mdash; a Mac (Apple silicon or Intel), a Windows PC, or Linux (x86_64 or ARM64).</li>
+  <li><strong>A model</strong> &mdash; a ChatGPT plan you sign in to, or an API key from a provider such as Anthropic, Google Gemini, OpenAI or OpenRouter, or a model running on your own machine (Ollama, llama.cpp). The app finds one already on your computer when it can.</li>
+  <li><strong>Optional:</strong> a Telegram, Slack or Discord bot, if you also want to talk to your agent from your phone's chat apps. You can add it later.</li>
 </ul>
 
 <h2>Steps</h2>
 <ol>
-  <li><a href="/getting-started/build">Build from source</a> — clone and compile</li>
-  <li><a href="/getting-started/wizard">First run wizard</a> — interactive configuration setup</li>
-  <li><a href="/configuration">Configure</a> — customize config.toml as needed</li>
-  <li><a href="/service-install">Install as service</a> — run on boot with systemd/launchd</li>
+  <li><a href="/getting-started/build">Install</a> &mdash; download and open the app for your computer</li>
+  <li><a href="/getting-started/wizard">First run</a> &mdash; the app starts the assistant and connects a model</li>
+  <li><a href="/app">Use the app</a> &mdash; chat, approvals, live views, settings</li>
+  <li><a href="/configuration">Configure</a> &mdash; every setting is also in <code>config.toml</code> and on the app's Settings page</li>
 </ol>
 `
   },
   {
     slug: '/getting-started/build',
     section: 'Getting Started',
-    title: 'Build from Source',
-    description: 'Install aidaemon via Homebrew, cargo install, cargo binstall, or build from source. Supports Linux, macOS, and Windows.',
+    title: 'Install',
+    description: 'Download and install AIdaemon on macOS, Windows or Linux, step by step. Advanced options: Homebrew, Cargo, building from source, servers.',
     content: () => `
-<h1>Install</h1>
-<p class="lead">Install via one-line script, Homebrew, Cargo, or build from source.</p>
+<h1>Install AIdaemon</h1>
+<p class="lead">Pick your computer below and follow the steps. It takes a few minutes, and on macOS and Windows you never need a terminal.</p>
 
-<h2>One-line Install (Recommended)</h2>
-<p>Works on any Linux VPS or macOS machine. Downloads the latest binary and verifies its SHA256 checksum:</p>
+<p>All downloads are on the <a href="https://github.com/davo20019/aidaemon/releases/latest" target="_blank" rel="noopener">latest release page</a>. The current version is <strong>0.21.0</strong>.</p>
+
+<h2>macOS</h2>
+<p><strong>First, check which Mac you have:</strong> click the Apple menu (the apple logo at the top left of the screen) &rarr; <strong>About This Mac</strong>. If the <strong>Chip</strong> line says <em>Apple M&hellip;</em>, you have Apple silicon. If it shows a <strong>Processor</strong> line with <em>Intel</em>, you have an Intel Mac.</p>
+<ol>
+  <li>Download the app for your Mac:
+    <ul>
+      <li>Apple silicon (M1, M2, M3 and later): <a href="https://github.com/davo20019/aidaemon/releases/latest/download/AIdaemon-macos-aarch64.dmg"><code>AIdaemon-macos-aarch64.dmg</code></a></li>
+      <li>Intel: <a href="https://github.com/davo20019/aidaemon/releases/latest/download/AIdaemon-macos-x86_64.dmg"><code>AIdaemon-macos-x86_64.dmg</code></a></li>
+    </ul>
+  </li>
+  <li>Open the downloaded <code>.dmg</code> file.</li>
+  <li>Drag <strong>AIdaemon</strong> into the <strong>Applications</strong> folder.</li>
+  <li>Open AIdaemon from Applications (or Launchpad).</li>
+</ol>
+${callout('info', 'If macOS blocks it the first time', 'Open <strong>System Settings &rarr; Privacy &amp; Security</strong>, scroll down to the message about AIdaemon and click <strong>Open Anyway</strong>. You only need to do this once.')}
+
+<h2>Windows</h2>
+<ol>
+  <li>Download <a href="https://github.com/davo20019/aidaemon/releases/latest/download/aidaemon-windows-x86_64.zip"><code>aidaemon-windows-x86_64.zip</code></a>.</li>
+  <li>Right-click the zip file and choose <strong>Extract All&hellip;</strong>. Extract it to a folder you will keep (for example <code>%LOCALAPPDATA%\\AIdaemon</code>), not your Downloads folder.</li>
+  <li>Open the extracted folder and double-click <code>aidaemon-app.exe</code>.</li>
+</ol>
+${callout('info', 'If Windows SmartScreen warns you', 'Click <strong>More info</strong>, then <strong>Run anyway</strong>.')}
+
+<h2>Linux</h2>
+<p>Open a terminal and run the installer. It downloads the right build for your machine (x86_64 or ARM64), checks it, and installs the app too:</p>
 ${codeBlock(`curl -sSfL https://get.aidaemon.ai | bash`, 'bash')}
-${callout('success', 'Batteries Included', 'Pre-built binaries include all channel integrations (Telegram, Slack, Discord) and the browser tool. Just enable what you need in <code>config.toml</code> &mdash; no compilation required.')}
+<p>Or download a release archive yourself and extract it:</p>
+<ul>
+  <li>x86_64: <a href="https://github.com/davo20019/aidaemon/releases/latest/download/aidaemon-linux-x86_64.tar.gz"><code>aidaemon-linux-x86_64.tar.gz</code></a></li>
+  <li>ARM64 (aarch64): <a href="https://github.com/davo20019/aidaemon/releases/latest/download/aidaemon-linux-aarch64.tar.gz"><code>aidaemon-linux-aarch64.tar.gz</code></a></li>
+</ul>
+<p>Then open the app with <code>aidaemon app</code> (a window) or <code>aidaemon tui</code> (in the terminal).</p>
 
-<h2>Install via Homebrew</h2>
-<p>The easiest way to install on macOS or Linux:</p>
+<h2>Homebrew (macOS or Linux)</h2>
 ${codeBlock(`brew install davo20019/tap/aidaemon`, 'bash')}
+<p>Then run <code>aidaemon app</code>.</p>
 
-<h2>Install via Cargo</h2>
-<p>For Rust developers. Note: <code>cargo install</code> builds from source with default features only (Telegram). To include all channels, add feature flags:</p>
-${codeBlock(`cargo install aidaemon --features "browser,slack,discord"
-# Or for pre-built binaries:
-cargo binstall aidaemon`, 'bash')}
+<h2>What happens next</h2>
+<p>The first time the app opens, it starts the assistant on this computer (now and at every login, no administrator password needed) and helps you connect a model. See <a href="/getting-started/wizard">First run</a>.</p>
 
-<h2>Clone &amp; Build from Source</h2>
-<p>For contributors and developers:</p>
+<h2>Advanced</h2>
+
+<h3>Cargo</h3>
+<p>For Rust developers:</p>
+${codeBlock(`cargo install --locked --git https://github.com/davo20019/aidaemon aidaemon`, 'bash')}
+
+<h3>Build from source</h3>
 ${codeBlock(`git clone https://github.com/davo20019/aidaemon.git
 cd aidaemon
-cargo build --release --features "browser,slack,discord"`, 'bash')}
+cargo build --release`, 'bash')}
+<p>The binary is at <code>./target/release/aidaemon</code>. The default features are <code>discord</code>, <code>slack</code>, <code>encryption</code>, <code>browser</code>, <code>terminal-bridge</code>, <code>otel</code> and <code>execution-docker</code>. Optional features include <code>computer_use</code> and <code>computer_use-macos</code> (operate native macOS apps) and <code>sdk-memory</code>. The app itself lives in <code>clients/app</code> and is built separately.</p>
 
-<p>The compiled binary will be at <code>./target/release/aidaemon</code>.</p>
+<h3>Running on a server</h3>
+<p>On a server, run <code>aidaemon</code> with no config. It prints a link and a one-time code. Reach the machine's port <code>8788</code> through an SSH tunnel or your own HTTPS tunnel, open the link on your laptop or phone, and finish setup there (the code pairs the first device only):</p>
+${codeBlock(`# on your laptop
+ssh -L 8788:127.0.0.1:8788 you@your-server
+# then open the printed link in your browser`, 'bash')}
+<p>Prefer a terminal? <code>aidaemon setup</code> connects the model right there. To keep the daemon running, see <a href="/service-install">Run as a service</a>. To reach the app from other devices without SSH, see <a href="/app/gateway">Client Gateway &amp; pairing</a>.</p>
 
-<h2>Feature Flags (Build from Source Only)</h2>
-<p>If you installed via the one-line script or Homebrew, all features are already included. These flags are only relevant when building from source:</p>
-
-<h3>Browser</h3>
-<p>Enable Chrome automation with persistent login sessions:</p>
-${codeBlock(`cargo build --release --features browser`, 'bash')}
-<p>After building, run <code>aidaemon browser login</code> to open Chrome and log into your services. See the <a href="/tools/browser">Browser Tool</a> docs for details.</p>
-${callout('info', 'Note', 'Requires a Chromium-based browser installed on the system (Chrome, Chromium, Brave, or Edge).')}
-
-<h3>Slack</h3>
-<p>Enable the Slack channel integration (Socket Mode):</p>
-${codeBlock(`cargo build --release --features slack`, 'bash')}
-
-<h3>Discord</h3>
-<p>Enable the Discord bot integration:</p>
-${codeBlock(`cargo build --release --features discord`, 'bash')}
-
-<h3>Multiple Features</h3>
-<p>Combine features as needed:</p>
-${codeBlock(`cargo build --release --features "browser,slack,discord"`, 'bash')}
-
-<h2>Verify</h2>
-${codeBlock(`./target/release/aidaemon --help`, 'bash')}
-
-<p>If no <code>config.toml</code> exists, running the binary will automatically launch the <a href="/getting-started/wizard">setup wizard</a>.</p>
+<h3>Verify a download</h3>
+<p>Every release file has a matching <code>.sha256</code> file on the release page. The one-line installer checks it for you.</p>
 `
   },
   {
     slug: '/getting-started/wizard',
     section: 'Getting Started',
-    title: 'First Run Wizard',
-    description: 'On first launch, aidaemon runs an interactive setup wizard to configure your LLM provider and channel tokens.',
+    title: 'First Run',
+    description: 'What happens the first time you open AIdaemon: the assistant starts on your computer, finds or connects a model, and opens your first conversation.',
     content: () => `
-<h1>First Run Wizard</h1>
-<p class="lead">On first launch (no config.toml found), aidaemon runs an interactive setup wizard.</p>
+<h1>First Run</h1>
+<p class="lead">The first time you open the AIdaemon app, it starts the assistant on your computer and helps you connect a model. Nothing is saved until a test call to the model answers.</p>
 
-<h2>Provider Selection</h2>
-<p>The wizard offers these presets:</p>
+<h2>1. Where the assistant runs</h2>
+<p>The desktop app starts the assistant (the daemon) on this computer right away, now and at every login, with no administrator password. This is <strong>Run it here</strong>, the same as <code>aidaemon service install</code>. To run it on a server instead, choose <strong>Run it on another machine instead</strong> and paste the link that server printed (see <a href="/getting-started/build">Install &rarr; Running on a server</a>).</p>
+
+<h2>2. Connect a model</h2>
+<p>The app looks for a model already on your computer &mdash; a ChatGPT sign-in, a provider key in the environment (such as <code>OPENAI_API_KEY</code> or <code>ANTHROPIC_API_KEY</code>), or Ollama or llama.cpp running locally &mdash; and offers it in one click. Or pick a provider yourself:</p>
+<ul>
+  <li><strong>ChatGPT subscription</strong> &mdash; sign in from the app. On another device, paste the address the browser ends on.</li>
+  <li><strong>A provider key</strong> &mdash; the key is checked first, then you pick a model from your account's own list (the usual one is preselected).</li>
+  <li><strong>Self-hosted</strong> &mdash; <strong>Ollama (local)</strong>, <strong>llama.cpp (local)</strong>, or <strong>Another OpenAI-compatible service</strong> with your server's address (LM Studio, vLLM) and the key left empty.</li>
+</ul>
+<p>Each provider says whether it uses your plan, bills per token, or runs on your own machine. One test call must answer before anything is saved.</p>
 
 <table class="config-table">
-<thead><tr><th>Provider</th><th>Base URL</th><th>Default Models</th></tr></thead>
+<thead><tr><th>Provider</th><th>Key variable</th><th>Starting models (primary / fast / smart)</th><th>Billing</th></tr></thead>
 <tbody>
-<tr><td><strong>Google AI Studio (Native)</strong></td><td>Native API</td><td>gemini-3-flash-preview / gemini-2.5-flash-lite / gemini-3-pro-preview</td></tr>
-<tr><td>OpenAI</td><td><code>https://api.openai.com/v1</code></td><td>gpt-5-mini / gpt-5-nano / gpt-5.1</td></tr>
-<tr><td>Anthropic (Native)</td><td>Native API</td><td>claude-sonnet-4-5 / claude-haiku-4-5 / claude-opus-4-6</td></tr>
-<tr><td>Anthropic (OpenRouter)</td><td><code>https://openrouter.ai/api/v1</code></td><td>anthropic/claude-* variants</td></tr>
-<tr><td>OpenRouter</td><td><code>https://openrouter.ai/api/v1</code></td><td>Mixed providers</td></tr>
-<tr><td>Moonshot AI (Kimi)</td><td><code>https://api.moonshot.ai/v1</code></td><td>kimi-k2.5 / kimi-k2 / kimi-k2.5</td></tr>
-<tr><td>MiniMax</td><td><code>https://api.minimax.io/v1</code></td><td>MiniMax-M2.5 / MiniMax-M2.5-highspeed / MiniMax-M2.5</td></tr>
-<tr><td>Cloudflare AI Gateway</td><td><code>https://gateway.ai.cloudflare.com/v1/&lt;ACCOUNT_ID&gt;/&lt;GATEWAY_ID&gt;/compat</code></td><td>Provider-dependent (for example: gpt-5-mini / gpt-5-nano / gpt-5.1)</td></tr>
-<tr><td>Ollama (local)</td><td><code>http://localhost:11434/v1</code></td><td>Auto-discovered from local instance</td></tr>
-<tr><td>Custom</td><td>User-specified</td><td>User-specified</td></tr>
+<tr><td>OpenAI (ChatGPT subscription)</td><td>sign-in</td><td>gpt-6-sol / gpt-6-luna / gpt-6-sol</td><td>Your plan</td></tr>
+<tr><td>Anthropic</td><td><code>ANTHROPIC_API_KEY</code></td><td>claude-sonnet-5-5 / claude-haiku-5-5 / claude-opus-5-5</td><td>Per token</td></tr>
+<tr><td>OpenAI</td><td><code>OPENAI_API_KEY</code></td><td>gpt-5</td><td>Per token</td></tr>
+<tr><td>Google Gemini</td><td><code>GEMINI_API_KEY</code> or <code>GOOGLE_API_KEY</code></td><td>gemini-4-hydrogen / gemini-3.5-flash-lite / gemini-4-argon</td><td>Per token</td></tr>
+<tr><td>OpenRouter</td><td><code>OPENROUTER_API_KEY</code></td><td>moonshotai/kimi-k2.5</td><td>Per token</td></tr>
+<tr><td>xAI (Grok)</td><td><code>XAI_API_KEY</code></td><td>grok-4</td><td>Per token</td></tr>
+<tr><td>DeepSeek</td><td><code>DEEPSEEK_API_KEY</code></td><td>deepseek-chat / deepseek-chat / deepseek-reasoner</td><td>Per token</td></tr>
+<tr><td>Moonshot AI (Kimi)</td><td><code>MOONSHOT_API_KEY</code></td><td>kimi-k2.5 / kimi-k2.5 / kimi-k2-thinking</td><td>Per token</td></tr>
+<tr><td>MiniMax</td><td><code>MINIMAX_API_KEY</code></td><td>MiniMax-M2.5 / MiniMax-M2.5-highspeed / MiniMax-M2.5</td><td>Per token</td></tr>
+<tr><td>Cloudflare AI Gateway, other OpenAI-compatible</td><td>&mdash;</td><td>Your choice</td><td>Per token</td></tr>
+<tr><td>Ollama, llama.cpp</td><td>none</td><td>Listed from your server</td><td>Local</td></tr>
 </tbody>
 </table>
+<p>These are only the starting picks; the app offers what your account actually lists. See <a href="/providers">Providers</a> for the config each one writes.</p>
+${callout('info', 'llama.cpp and port 8080', '<code>llama-server</code> and the daemon\'s health check both default to port 8080. Start one of them elsewhere (<code>llama-server --port 8081</code>, or <code>[daemon] health_port</code>) and give llama.cpp\'s address in its form.')}
 
-<h2>Wizard Steps</h2>
-<ol>
-  <li><strong>Select provider</strong> — choose from presets or enter custom</li>
-  <li><strong>Enter API key</strong> — skipped for Ollama (no auth needed)</li>
-  <li><strong>Optional gateway token</strong> — Cloudflare preset can add <code>cf-aig-authorization</code> for Authenticated Gateway mode</li>
-  <li><strong>Model selection</strong> — auto-populated from preset, or auto-discovered for Ollama</li>
-  <li><strong>Telegram setup</strong> — enter bot token and your numeric user ID</li>
-  <li><strong>Browser setup</strong> (if compiled with <code>browser</code> feature) — auto-detects Chrome profiles</li>
-  <li><strong>Generate config.toml</strong> — written to current directory</li>
-</ol>
+<h2>3. Your first conversation</h2>
+<p>Your first conversation opens next. Its greeting says what the agent does on its own, what it asks you about first, and offers prompts to press. To talk to your agent from Telegram, Slack or Discord later, use <strong>Settings &rarr; Reach it from your phone</strong>: connect a bot by its token, and that step is done once your first message there has been answered.</p>
 
-${callout('info', 'Ollama Auto-Discovery', 'When selecting Ollama, the wizard queries <code>http://localhost:11434/api/tags</code> to list all locally available models and lets you pick.')}
+<h2>Setup from a terminal</h2>
+<p>With no <code>config.toml</code>, <code>aidaemon</code> runs <em>setup mode</em>: the Client Gateway on its usual loopback address (port 8788) with no agent behind it, plus a one-time link and code for a device elsewhere. The first device to redeem it becomes the owner device. <code>aidaemon setup</code> takes the model step in the terminal instead. The old interactive setup wizard is gone; <code>aidaemon setup low-latency</code> is unchanged.</p>
+`
+  },
+  {
+    slug: '/app',
+    section: 'App',
+    title: 'The AIdaemon App',
+    description: 'The AIdaemon app for desktop, web and terminal: chat, approvals, live views of the agent\'s browser, project files, read aloud, settings and usage.',
+    content: () => `
+<h1>The AIdaemon App</h1>
+<p class="lead">One app for the desktop, the web and the terminal: chat with your agent, answer its approvals, watch its work, and change its settings.</p>
 
-<h2>Chrome Profile Detection</h2>
-<p>The wizard auto-detects Chrome/Chromium profiles for browser session reuse:</p>
+<h2>Opening it</h2>
+<table class="config-table">
+<thead><tr><th>Where</th><th>How</th></tr></thead>
+<tbody>
+<tr><td>Desktop window</td><td>Open AIdaemon (macOS, Windows), or run <code>aidaemon app</code></td></tr>
+<tr><td>Terminal</td><td><code>aidaemon tui</code></td></tr>
+<tr><td>Browser on this machine</td><td><code>aidaemon web</code> opens the web build and pairs it (confirm in the terminal)</td></tr>
+<tr><td>Phone or another computer</td><td>Pair it, then open the gateway's address. See <a href="/app/gateway">Client Gateway &amp; pairing</a>.</td></tr>
+</tbody>
+</table>
+<p>The app talks to the daemon through the <a href="/app/gateway">Client Gateway</a>. Downloads and the installer set it up for you; with the gateway off, the app says how to turn it on.</p>
+
+<h2>Chatting</h2>
 <ul>
-  <li><strong>macOS:</strong> <code>~/Library/Application Support/Google/Chrome</code></li>
-  <li><strong>Linux:</strong> <code>~/.config/google-chrome</code> or <code>~/.config/chromium</code></li>
+  <li><strong>Replies stream in</strong> as the model writes them (web and desktop).</li>
+  <li><strong>Read aloud</strong> &mdash; under a reply, beside Copy, Read aloud speaks it with the system's own voice: the browser's speech in the web app, <code>say</code> on macOS, Windows' built-in voices, and <code>spd-say</code> or <code>espeak-ng</code> (or <code>espeak</code>) on Linux. With none of those installed on Linux there is no button. Code blocks are said as "(code)" and links as their text.</li>
+  <li><strong>Dictation</strong> &mdash; in the web app through the browser's speech recognizer. Pressing Send ends dictation.</li>
+  <li><strong>Which model answered</strong> &mdash; under each reply, after its time and Copy, the provider and model that actually wrote it (a failover is named when it answered).</li>
+  <li><strong>Edit and Send again</strong> &mdash; every message you sent has Copy, Edit and Send again. Both add a new message at the end, so nothing above is lost.</li>
+  <li><strong>Archive</strong> &mdash; archive or bring back a conversation from its menu. Archived ones are under Archived in the sidebar's filter, and search looks through them too. Writing in an archived chat brings it back.</li>
+  <li><strong>Pull to refresh</strong> &mdash; pull a list down past its top, or on desktop press Cmd/Ctrl+R. Back after 30 seconds or more away, the app catches up on its own.</li>
+  <li><strong>Steps survive a reconnect</strong> &mdash; reconnecting during a turn shows what each step was given and gave back.</li>
 </ul>
-<p>Reusing a profile inherits cookies and sessions, so the agent can access authenticated sites.</p>
+
+<h2>Keyboard</h2>
+<p>The app is keyboard-first: <kbd>Esc</kbd> stops the session's work, <kbd>y</kbd>/<kbd>s</kbd>/<kbd>a</kbd>/<kbd>n</kbd> answer an approval card once it has been on screen long enough to read, and one palette (<kbd>Ctrl/Cmd+K</kbd>) holds sessions and commands. The status line always says whether the daemon is connected, reconnecting, not running, or has signed the device out.</p>
+
+<h2>Approvals</h2>
+<p>Every approval card from every chat can be answered from the app; the first answer wins, and the chat's card then says who answered. The first card on each device explains what the agent asks about and what each answer does.</p>
+
+<h2>Live views: watch and take over</h2>
+<p>A conversation's header opens a live view of the agent's browser: watch it work, take control, and give it back. On a phone it works like a browser (tap to click, drag to scroll, pinch to zoom, type with the phone's keyboard); with a mouse and keyboard it works like a remote desktop window. When the agent needs you (a sign-in, a captcha) it hands you the tab with a take-over card on every channel (Open the live view, Done, Not now). You type the sign-in yourself; the agent never sees it.</p>
+<p>With <code>[surfaces] desktop = true</code> (off by default, macOS with computer use), this computer's displays can be watched and driven the same way, and <code>aidaemon share-screen</code> pairs another computer once and shares its main display. See <a href="/configuration">Configuration &rarr; [surfaces]</a>.</p>
+
+<h2>Projects and files</h2>
+<p>A coding conversation's details pane has a <strong>Files</strong> tab, and a project's page opens its folder: read-only, git's changes marked, ignored files on request, secrets shown by name only. Pictures and PDFs preview. Projects can be pinned, sorted and deleted from their menu (deleting a project leaves its folder on disk alone).</p>
+<p>A conversation in a project keeps what it learns in that project's own notes under <code>~/.aidaemon/projects/&lt;project-id&gt;/memory/</code>, apart from your personal memory. It also gets the repository's own skills (<code>.agents/skills</code>, <code>.claude/skills</code>) and can start the MCP servers its <code>.mcp.json</code> declares, each only after you approve its exact command. Your own <code>~/.aidaemon/AGENTS.md</code> is loaded as the broadest instruction file of every project.</p>
+
+<h2>Coding agents</h2>
+<p>Each coding agent runs in a permission mode you pick per agent in Settings, and Settings shows whether each one can work now. See <a href="/tools/cli-agents">CLI Agent Delegation</a>.</p>
+
+<h2>Settings</h2>
+<p>The Settings page (desktop, web and terminal) shows every setting <code>config.toml</code> holds or documents, by table, with its value or default, whether changing it asks first, and whether it takes effect on a reload or a restart. Edit settings in place, store secrets in the keychain, switch providers and add failovers, manage MCP servers and bots, and Reload or Restart. Security-sensitive changes (secrets, <code>base_url</code>, allowed users, the gateway, MCP and CLI agent commands) wait for your approval like any card.</p>
+<p>Settings also shows <strong>what each account has used and has left</strong>: a ChatGPT plan's 5-hour and weekly limits and an OpenRouter key's balance, each with a meter and its reset.</p>
+
+<h2>Automations</h2>
+<p>Schedules may name an IANA time zone ("every weekday at 8am Europe/Madrid") and follow its daylight saving. Automation cards show the schedule's zone and the runs in your time; a run missed while the daemon was off is listed as Missed. See <a href="/scheduler">Scheduled Tasks</a>.</p>
+`
+  },
+  {
+    slug: '/app/gateway',
+    section: 'App',
+    title: 'Client Gateway & Pairing',
+    description: 'The Client Gateway serves the AIdaemon app and paired devices: config keys, commands, pairing, tunnels and the client protocol.',
+    content: () => `
+<h1>Client Gateway &amp; Pairing</h1>
+<p class="lead">The Client Gateway serves the AIdaemon Client Protocol to your own apps and paired devices. It listens on loopback only; other devices reach it through a tunnel.</p>
+
+<h2>Turning it on</h2>
+<p>The macOS and Windows downloads and first-run setup turn it on for you. By hand:</p>
+${codeBlock(`[client_gateway]
+enabled = true
+# bind = "127.0.0.1"
+# port = 8788
+# public_url = "https://aidaemon.example.ts.net"   # your HTTPS tunnel, for pairing links`, 'toml', 'config.toml')}
+<p>Or ask the agent to "enable the client gateway": <code>manage_config</code> does it in one approved step, then restarts. Any change to a <code>client_gateway</code> key needs the owner's approval.</p>
+
+${configTable([
+  ['enabled', 'bool', 'false', 'Serve the Client Gateway'],
+  ['bind', 'string', '"127.0.0.1"', 'Listen address. Must be loopback: a non-loopback bind is refused.'],
+  ['port', 'integer', '8788', 'Listen port'],
+  ['token_file', 'string', 'null', 'Where the local token\'s hash is kept. Empty: the daemon\'s default path.'],
+  ['retention_days', 'integer', '7', 'Resume window. A client further behind gets a snapshot.'],
+  ['max_events', 'integer', '100000', 'Most events the resume log keeps'],
+  ['watch_risk_ceiling', 'string', '"medium"', 'Highest risk a paired watch may approve; above it a watch may only deny'],
+  ['public_url', 'string', 'null', 'The HTTPS address paired devices use, put in pairing links'],
+  ['app_dir', 'string', 'null', 'Directory of the app\'s web build, served at <code>/client/v1/next/</code>. The installer puts it in <code>~/.aidaemon/app-web</code>.'],
+])}
+
+<h2>Endpoints</h2>
+<ul>
+  <li><code>/client/v1/ws</code> &mdash; WebSocket</li>
+  <li><code>POST /client/v1/commands</code> and long-poll <code>GET /client/v1/events</code></li>
+  <li><code>/client/v1/next/</code> &mdash; the web app (<code>/client/v1/app</code> redirects there)</li>
+</ul>
+<p>The current client protocol is <strong>1.39</strong>. Clients resume from their last event without loss or duplicates.</p>
+
+<h2>The local token</h2>
+<p>Apps on the same machine sign in with the local token saved at <code>~/.aidaemon/client-token</code> (owner-only), minted on first use. <code>aidaemon client-token</code> saves it there; add <code>--print</code> to print it for scripts.</p>
+
+<h2>Pairing phones and browsers</h2>
+<ol>
+  <li>Send <code>/pair_device</code> in a chat, or run <code>aidaemon pair</code> in a terminal (it shows a QR code). This makes a single-use code valid for ten minutes.</li>
+  <li>Open the link on the device. It redeems the code with its own key.</li>
+  <li>Confirm in that chat or terminal.</li>
+</ol>
+<p>Each paired device gets short-lived tokens carrying its scopes (observe, chat, approve). <code>/devices</code> lists devices and <code>/revoke_device &lt;id&gt;</code> ends a device's tokens and open connections at once.</p>
+
+<h2>Reaching it from other devices</h2>
+<p>The gateway only listens on loopback. Let the daemon run the tunnel itself:</p>
+${codeBlock(`[exposure.client_gateway]
+adapter = "tailscale"        # private to your tailnet; mode = "funnel" makes it public`, 'toml', 'config.toml')}
+<p>Adapters: <code>tailscale</code> (<code>serve</code> or <code>funnel</code>), <code>cloudflare</code> (<code>named</code>, or <code>quick</code> for a throwaway address), <code>manual</code> (the <code>url</code> of a reverse proxy you run) and <code>command</code>. <code>cloudflared</code> or <code>tailscale</code> must be on <code>PATH</code>. Changes apply after a restart; <code>/exposure</code> shows each tunnel's state. An SSH tunnel to port 8788 also works.</p>
 `
   },
   {
@@ -242,21 +375,29 @@ ${callout('info', 'Ollama Auto-Discovery', 'When selecting Ollama, the wizard qu
 
 <h2>[provider]</h2>
 ${configTable([
-  ['kind', 'string', '"google_genai"', 'Provider type: <code>google_genai</code>, <code>openai_compatible</code>, or <code>anthropic</code>'],
+  ['kind', 'string', '"openai_compatible"', 'Provider type: <code>openai_compatible</code>, <code>openai_chatgpt</code>, <code>anthropic</code>, <code>google_genai</code> or <code>xai_native</code>. See <a href="/providers">Providers</a>.'],
   ['api_key', 'string', '—', 'API key for the provider (required)'],
   ['gateway_token', 'string', 'null', 'Optional Cloudflare AI Gateway token used as <code>cf-aig-authorization</code>'],
-  ['base_url', 'string', '—', 'API base URL (required for <code>openai_compatible</code>, not used for native providers)'],
+  ['base_url', 'string', '—', 'API base URL (required for <code>openai_compatible</code>; optional for <code>anthropic</code>, with or without <code>/v1</code>)'],
+  ['reasoning_effort', 'string', 'null', 'Extended thinking, e.g. <code>low</code>, <code>medium</code>, <code>high</code>, <code>off</code>'],
+  ['streaming', 'bool', 'false', 'Opt-in SSE streaming transport for OpenAI-compatible providers'],
+  ['auto_upgrade', 'bool', 'true', 'Move the model in use to the newest version of its line once the provider lists it (checked daily, proven with one tool call first). Pay-per-token providers are only told. See <a href="/providers">Providers</a>.'],
 ])}
+
+<h2>[[provider.fallbacks]]</h2>
+<p>Ordered cross-provider fallbacks, each with the same keys as <code>[provider]</code> and its own <code>[provider.fallbacks.models]</code>. A provider whose quota, credit or key fails is skipped until its stated reset.</p>
 
 <h2>[provider.models]</h2>
 ${configTable([
   ['primary', 'string', '(provider default)', 'Default model for general queries'],
-  ['fast', 'string', '(same as primary)', 'Low-latency model for intent-gate/simple turns (prefer non-reasoning instruct models)'],
-  ['smart', 'string', '(same as primary)', 'Model for complex execution turns (can be the same as primary)'],
+  ['fast', 'string', '(provider default)', 'Low-latency model for simple turns (prefer non-reasoning instruct models)'],
+  ['smart', 'string', '(provider default)', 'Model for complex execution turns (can be the same as primary)'],
+  ['default', 'string', '—', 'Alternative to <code>primary</code>: the model for normal requests'],
+  ['fallback', 'array', '[]', 'Ordered models tried when calls fail'],
 ])}
 
-${callout('info', 'Model Defaults', 'Provider-aware defaults are filled automatically by the wizard and may change across releases as provider catalogs evolve. For production, pin explicit model IDs in <code>[provider.models]</code>. If all three tiers resolve to the same model, auto-routing is disabled. See <a href="/router">Model Routing</a>.')}
-${callout('warn', 'Fast Tier Guidance', 'Set <code>provider.models.fast</code> to a cheap non-reasoning instruction model for intent-gate and routing. Avoid reasoning/thinking models in <code>fast</code> because they usually increase token burn and latency for no routing benefit.')}
+${callout('info', 'Model Defaults', 'Provider-aware defaults are filled automatically by first-run setup (from the provider catalog) and may change across releases as provider catalogs evolve. For production, pin explicit model IDs in <code>[provider.models]</code>. If all three tiers resolve to the same model, auto-routing is disabled. See <a href="/router">Model Routing</a>.')}
+${callout('warn', 'Fast Tier Guidance', 'Set <code>provider.models.fast</code> to a cheap non-reasoning instruction model for routing. Avoid reasoning/thinking models in <code>fast</code> because they usually increase token burn and latency for no routing benefit.')}
 
 <h2>[telegram]</h2>
 ${configTable([
@@ -288,8 +429,18 @@ ${configTable([
   ['working_memory_cap', 'integer', '50', 'Max messages per session kept in memory'],
   ['consolidation_interval_hours', 'integer', '6', 'Hours between memory consolidation runs'],
   ['max_facts', 'integer', '100', 'Maximum number of facts injected into the system prompt'],
-  ['daily_token_budget', 'integer', 'null', 'Max total tokens (input+output) per day. Null = unlimited. Resets at midnight UTC.'],
+  ['daily_token_budget', 'integer', 'null', 'Ignored since 0.20.0 (logged once at startup). Cap spend with a provider spend limit; per-goal budgets and <code>subagents.task_token_budget</code> still apply.'],
   ['encryption_key', 'string', 'null', 'SQLCipher encryption key (requires <code>encryption</code> feature). AES-256 at rest.'],
+  ['upgrade_backups', 'integer', '2', 'Snapshots kept in <code>backups/</code> next to the database, one written when a new aidaemon version first starts on it. <code>0</code> turns it off.'],
+])}
+
+<h2>[memory]</h2>
+${configTable([
+  ['backend', 'string', '"daemon"', '<code>daemon</code> (built-in memory) or <code>sdk</code> (the aidaemon-memory crate; build with <code>--features sdk-memory</code>)'],
+  ['path', 'string', '"aidaemon-memory.db"', 'SQLite file for the <code>sdk</code> backend'],
+  ['embedding_model', 'string', '"AllMiniLML6V2Q"', 'Local fastembed model, e.g. <code>AllMiniLML6V2</code>, <code>BGESmallENV15</code>, <code>BGEBaseENV15</code>, <code>ParaphraseMLMiniLML12V2</code>. Changing it re-embeds stored memory once, in the background.'],
+  ['project_memory', 'bool', 'true', 'A conversation placed in a project keeps what it learns in that project\'s own notes'],
+  ['projects_dir', 'string', '"~/.aidaemon/projects"', 'Where project notes live (one directory per project id)'],
 ])}
 
 <h2>[terminal]</h2>
@@ -354,6 +505,29 @@ ${configTable([
   ['timeout_secs', 'integer', '300', 'Sub-agent execution timeout in seconds'],
 ])}
 
+<h2>[client_gateway]</h2>
+<p>Serves the <a href="/app">AIdaemon app</a> and paired devices. Full reference: <a href="/app/gateway">Client Gateway &amp; Pairing</a>.</p>
+${configTable([
+  ['enabled', 'bool', 'false', 'Serve the Client Gateway'],
+  ['bind', 'string', '"127.0.0.1"', 'Loopback only'],
+  ['port', 'integer', '8788', 'Listen port'],
+  ['public_url', 'string', 'null', 'HTTPS tunnel address for pairing links'],
+])}
+
+<h2>[surfaces]</h2>
+<p>Live views: watch and take over the agent's browser from a paired app.</p>
+${configTable([
+  ['enabled', 'bool', 'true', 'Offer live views'],
+  ['allow_control', 'bool', 'true', 'Allow taking control, not only watching'],
+  ['control_anytime', 'bool', 'true', 'Take control without the agent asking; <code>false</code>: only during a handoff'],
+  ['desktop', 'bool', 'false', 'macOS with <code>[computer_use]</code>: also watch and drive this computer\'s displays'],
+  ['max_live_sessions', 'integer', '8', 'Live views open at once'],
+  ['max_fps', 'integer', '20', 'Most frames per second a view gets'],
+  ['max_width', 'integer', '1280', 'Widest frame a view gets'],
+  ['disconnect_grace_secs', 'integer', '30', 'Control returns to the agent this long after your device stops watching'],
+  ['idle_release_secs', 'integer', '900', 'Control returns to the agent after this long with no input'],
+])}
+
 <h2>[cli_agents]</h2>
 ${configTable([
   ['enabled', 'bool', 'false', 'Enable CLI agent delegation tool'],
@@ -368,6 +542,7 @@ ${configTable([
   ['description', 'string', '—', 'Tool description shown to the LLM'],
   ['timeout_secs', 'integer', 'null', 'Override global timeout for this tool'],
   ['max_output_chars', 'integer', 'null', 'Override global max output for this tool'],
+  ['protocol', 'string', 'null', '<code>"acp"</code> hosts an agent that speaks the Agent Client Protocol; each action it takes is asked first'],
 ])}
 
 <h2>[search]</h2>
@@ -575,82 +750,125 @@ mode = "check_only"`, 'toml', 'config.toml')}
     slug: '/providers',
     section: 'Configuration',
     title: 'Provider Setup',
-    description: 'Configure LLM providers for aidaemon: OpenAI-compatible, Anthropic native, or Google Generative AI backends.',
+    description: 'Configure LLM providers for aidaemon: ChatGPT subscription, Anthropic, Google Gemini, OpenAI-compatible APIs, xAI, local models, fallbacks and model upgrades.',
     content: () => `
 <h1>Provider Setup</h1>
-<p class="lead">aidaemon supports three provider types, all configured in the <code>[provider]</code> section.</p>
+<p class="lead">The app's first-run setup and Settings page write the <code>[provider]</code> section for you. This page shows what they write, for editing by hand.</p>
 
 <h2>Provider Kinds</h2>
+<table class="config-table">
+<thead><tr><th>kind</th><th>Used for</th></tr></thead>
+<tbody>
+<tr><td><code>openai_chatgpt</code></td><td>A ChatGPT plan through sign-in (no API key)</td></tr>
+<tr><td><code>anthropic</code></td><td>Anthropic's native Messages API</td></tr>
+<tr><td><code>google_genai</code></td><td>Google Gemini's native API</td></tr>
+<tr><td><code>xai_native</code></td><td>xAI (Grok)</td></tr>
+<tr><td><code>openai_compatible</code> (default)</td><td>OpenAI, OpenRouter, DeepSeek, Moonshot, MiniMax, Cloudflare AI Gateway, Ollama, llama.cpp and any OpenAI-compatible API</td></tr>
+</tbody>
+</table>
+<p><code>api_key = "keychain"</code> reads the key from the OS keychain; <code>api_key = "\${ENV_VAR}"</code> reads it from the environment. See <a href="/configuration">Secrets Management</a>.</p>
 
-<h3>google_genai (recommended)</h3>
-<p>Native Google Generative AI API. The recommended provider — Gemini models offer excellent tool-use capabilities, fast response times, and generous free-tier API access via <a href="https://aistudio.google.com/" target="_blank" rel="noopener">Google AI Studio</a>.</p>
+<h2>ChatGPT subscription</h2>
+<p>Runs on a ChatGPT plan instead of metered API billing. Sign in from the app, or in a terminal:</p>
+${codeBlock(`aidaemon auth login openai          # add --paste for headless/remote installs
+aidaemon auth status
+aidaemon auth logout openai`, 'bash')}
 ${codeBlock(`[provider]
-kind = "google_genai"
-api_key = "AIza..."
+kind = "openai_chatgpt"
+api_key = ""                        # unused; credentials come from the sign-in
 
 [provider.models]
-primary = "gemini-3-flash-preview"
-fast = "gemini-2.5-flash-lite"
-smart = "gemini-3-pro-preview"`, 'toml')}
+primary = "gpt-6-sol"
+fast = "gpt-6-luna"
+smart = "gpt-6-sol"`, 'toml')}
+<p>When the plan's usage limit is reached, the call moves straight to your fallback providers until the stated reset. Settings shows the plan's 5-hour and weekly limits.</p>
 
-${callout('info', 'Recommended Setup', 'Google AI Studio provides a free API key with generous rate limits. Gemini models have native tool-calling support, web grounding, and work well with aidaemon&rsquo;s agentic loop.')}
+<h2>Anthropic</h2>
+${codeBlock(`[provider]
+kind = "anthropic"
+api_key = "keychain"
+# base_url = "https://api.anthropic.com/v1"   # optional; with or without /v1
 
-<h3>Gemini Web Grounding</h3>
-<p>When using <code>google_genai</code>, aidaemon automatically enables Google Search grounding. This allows Gemini models to search the web as part of their responses. Models that don&rsquo;t support grounding with function calling are detected automatically and fall back gracefully.</p>
+[provider.models]
+primary = "claude-sonnet-5-5"
+fast = "claude-haiku-5-5"
+smart = "claude-opus-5-5"`, 'toml')}
+${callout('info', 'Base URL', 'The API root may be given with or without a trailing <code>/v1</code> (the provider catalog uses <code>https://api.anthropic.com/v1</code>); requests always go to <code>/v1/messages</code>. Before 0.21.0 a base URL ending in <code>/v1</code> was sent to <code>/v1/v1/messages</code> and every call failed with a 404.')}
+<h3>Prompt cache</h3>
+<p>aidaemon uses Anthropic's prompt cache. The fixed prefix (tool definitions and the system prompt) is cached for one hour, so a reply after a pause, or a new conversation within the hour, reads it from the cache. The conversation tail keeps the five-minute cache. Deferred tools are declared up front, so loading one with <code>load_tools</code> no longer rewrites the cache. <code>reasoning_effort</code> (<code>low</code>, <code>medium</code>, <code>high</code>, <code>off</code>) maps to extended thinking.</p>
 
-<h3>openai_compatible</h3>
-<p>Works with any API that implements the OpenAI chat completions format. This includes OpenAI, OpenRouter, Moonshot, MiniMax, Cloudflare AI Gateway, Ollama, and many others.</p>
+<h2>Google Gemini</h2>
+<p>Native Google Generative AI API, with a key from <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>.</p>
+${codeBlock(`[provider]
+kind = "google_genai"
+api_key = "keychain"
+
+[provider.models]
+primary = "gemini-4-hydrogen"
+fast = "gemini-3.5-flash-lite"
+smart = "gemini-4-argon"`, 'toml')}
+<p>When a request offers no tools, Gemini can ground its answer with Google Search. Tool results are sent back as user-role parts, as current Gemini models require (fixed in 0.21.0: before, a turn with a tool call kept falling back and never replied). A daily quota that runs out moves the call to your fallback providers at once.</p>
+
+<h2>OpenAI</h2>
 ${codeBlock(`[provider]
 kind = "openai_compatible"
-api_key = "sk-..."
+api_key = "keychain"
 base_url = "https://api.openai.com/v1"
 
 [provider.models]
-primary = "gpt-5-mini"
-fast = "gpt-5-nano"
-smart = "gpt-5.1"`, 'toml')}
+primary = "gpt-5"
+fast = "gpt-5"
+smart = "gpt-5"`, 'toml')}
 
-<h3>anthropic</h3>
-<p>Native Anthropic API (Messages API format). Use this for direct Anthropic access without going through an OpenAI-compatible proxy.</p>
+<h2>xAI (Grok)</h2>
 ${codeBlock(`[provider]
-kind = "anthropic"
-api_key = "sk-ant-..."
+kind = "xai_native"
+api_key = "keychain"
+base_url = "https://api.x.ai/v1"
 
 [provider.models]
-primary = "claude-sonnet-4-5"
-fast = "claude-haiku-4-5"
-smart = "claude-opus-4-6"`, 'toml')}
+primary = "grok-4"
+fast = "grok-4"
+smart = "grok-4"`, 'toml')}
 
 <h2>OpenRouter</h2>
-<p>OpenRouter provides access to models from multiple providers through a single API key and the OpenAI-compatible format.</p>
+<p>Models from many providers through one key and the OpenAI-compatible format. Settings shows the key's balance.</p>
 ${codeBlock(`[provider]
 kind = "openai_compatible"
-api_key = "sk-or-..."
+api_key = "keychain"
 base_url = "https://openrouter.ai/api/v1"
 
 [provider.models]
-primary = "openai/gpt-5-mini"
-fast = "mistralai/mistral-small-3.1-24b-instruct"
-smart = "openai/gpt-5.1"`, 'toml')}
-${callout('info', 'OpenRouter Fast Tier Picks', 'Current fast-tier picks for intent-gate: <code>mistralai/mistral-small-3.1-24b-instruct</code>, <code>mistralai/mistral-nemo</code>, <code>google/gemma-3-12b-it</code>, and <code>openai/gpt-5-nano</code>.')}
+primary = "moonshotai/kimi-k2.5"
+fast = "moonshotai/kimi-k2.5"
+smart = "moonshotai/kimi-k2.5"`, 'toml')}
 
-<h2>Moonshot AI (Kimi)</h2>
-<p>Moonshot provides Kimi models over an OpenAI-compatible API.</p>
+<h2>DeepSeek</h2>
 ${codeBlock(`[provider]
 kind = "openai_compatible"
-api_key = "YOUR_MOONSHOT_API_KEY"
+api_key = "keychain"
+base_url = "https://api.deepseek.com"
+
+[provider.models]
+primary = "deepseek-chat"
+fast = "deepseek-chat"
+smart = "deepseek-reasoner"`, 'toml')}
+
+<h2>Moonshot AI (Kimi)</h2>
+${codeBlock(`[provider]
+kind = "openai_compatible"
+api_key = "keychain"
 base_url = "https://api.moonshot.ai/v1"
 
 [provider.models]
 primary = "kimi-k2.5"
 fast = "kimi-k2.5"
-smart = "kimi-k2.5"`, 'toml')}
+smart = "kimi-k2-thinking"`, 'toml')}
 
 <h2>MiniMax</h2>
-<p>MiniMax provides an OpenAI-compatible API endpoint at <code>https://api.minimax.io/v1</code>.</p>
 ${codeBlock(`[provider]
 kind = "openai_compatible"
-api_key = "YOUR_MINIMAX_API_KEY"
+api_key = "keychain"
 base_url = "https://api.minimax.io/v1"
 
 [provider.models]
@@ -659,47 +877,43 @@ fast = "MiniMax-M2.5-highspeed"
 smart = "MiniMax-M2.5"`, 'toml')}
 
 <h2>Cloudflare AI Gateway</h2>
-<p>Cloudflare AI Gateway sits in front of upstream providers and exposes an OpenAI-compatible endpoint. Use this when you want centralized logging, caching, controls, or rate limiting across providers.</p>
+<p>Sits in front of upstream providers and exposes an OpenAI-compatible endpoint.</p>
 ${codeBlock(`[provider]
 kind = "openai_compatible"
-api_key = "sk-..." # Upstream provider key
-gateway_token = "cf-gw-..." # Optional: Authenticated Gateway mode
+api_key = "keychain"          # upstream provider key
+gateway_token = "keychain"    # optional: Authenticated Gateway mode
 base_url = "https://gateway.ai.cloudflare.com/v1/<ACCOUNT_ID>/<GATEWAY_ID>/compat"
 
 [provider.models]
-primary = "gpt-5-mini"
-fast = "gpt-5-nano"
-smart = "gpt-5.1"`, 'toml')}
-
+primary = "your-model-id"`, 'toml')}
 ${callout('info', 'Cloudflare Auth Modes', 'You can run with just <code>api_key</code> (basic mode), or add <code>gateway_token</code> to send <code>cf-aig-authorization</code> for Authenticated Gateway mode.')}
 
-<h2>Ollama (Local)</h2>
-<p>Run models locally with Ollama. No API key required.</p>
+<h2>Ollama and llama.cpp (local)</h2>
+<p>Self-hosted models need no key. First-run setup lists the models your server offers.</p>
 ${codeBlock(`[provider]
 kind = "openai_compatible"
-api_key = "ollama"
-base_url = "http://localhost:11434/v1"
+api_key = ""
+base_url = "http://localhost:11434/v1"   # Ollama
+# base_url = "http://localhost:8080/v1"  # llama.cpp's llama-server
 
 [provider.models]
-primary = "llama3.1"
-fast = "llama3.1"
-smart = "llama3.1"`, 'toml')}
+primary = "your-model-id"`, 'toml')}
+${callout('warn', 'Local addresses', 'HTTP is only allowed to localhost addresses. <code>llama-server</code> and the daemon\'s health check both default to port 8080: move one of them (<code>llama-server --port 8081</code>, or <code>[daemon] health_port</code>).')}
 
-${callout('info', 'Ollama Discovery', 'The setup wizard auto-discovers available Ollama models by querying <code>http://localhost:11434/api/tags</code>.')}
+<h2>Fallback providers</h2>
+<p>Entries under <code>[[provider.fallbacks]]</code> are tried in order after the main provider's own models. A provider whose account cannot answer (a plan's usage limit, a daily quota, no credit, a rejected key) is skipped at once and stays skipped until its stated reset. Switching the main provider in Settings keeps the old one as a failover.</p>
+${codeBlock(`[[provider.fallbacks]]
+kind = "anthropic"
+api_key = "keychain"
+[provider.fallbacks.models]
+default = "claude-sonnet-5-5"`, 'toml')}
+<p><code>[provider.models]</code> takes either <code>primary</code> / <code>fast</code> / <code>smart</code> or <code>default</code> plus an ordered <code>fallback = [...]</code> list of models tried when calls fail.</p>
 
-<h2>llama.cpp (Local)</h2>
-<p>You can also run aidaemon with <code>llama.cpp</code> via <code>llama-server</code> in OpenAI-compatible mode.</p>
+<h2>Model upgrades</h2>
+<p>Once a day the daemon checks each provider's model list and moves a model to the newest version of its own line (for example <code>gpt-6-sol</code> to <code>gpt-6.2-sol</code>; never another size, a snapshot or a preview). It first proves the new model with one tool call, keeps the old one as the first fallback, and tells you. With a pay-per-token provider you are only told. Turn it off with:</p>
 ${codeBlock(`[provider]
-kind = "openai_compatible"
-api_key = "llama" # Any value if your local server does not enforce auth
-base_url = "http://127.0.0.1:8080/v1"
-
-[provider.models]
-primary = "your-model-id"
-fast = "your-model-id"
-smart = "your-model-id"`, 'toml')}
-
-${callout('warn', 'llama.cpp Requirements', '<code>/v1/chat/completions</code> is required. <code>/v1/models</code> is strongly recommended so the <code>/models</code> command works. For security, HTTP is only allowed to localhost addresses in aidaemon.')}
+auto_upgrade = false`, 'toml')}
+<p>A <code>/model</code> pin postpones the upgrade.</p>
 `
   },
   {
@@ -1594,36 +1808,57 @@ ${callout('warn', 'Timeout', 'Each sub-agent invocation has a hard timeout (<cod
     slug: '/tools/cli-agents',
     section: 'Tools',
     title: 'CLI Agent Delegation',
-    description: 'Delegate tasks to Claude Code, Gemini CLI, Codex, Copilot, or Aider from within the aidaemon agent loop.',
+    description: 'Delegate coding work to Claude Code, Codex, Antigravity CLI, Gemini CLI, Copilot, Aider or any Agent Client Protocol agent, in a permission mode you choose.',
     content: () => `
 <h1>CLI Agent Delegation</h1>
-<p class="lead">Delegate tasks to external CLI coding tools like Claude Code, Gemini CLI, Codex, Copilot, or Aider.</p>
+<p class="lead">Delegate tasks to external coding agents (Claude Code, Codex, Antigravity CLI, Gemini CLI, Copilot, Aider) or to any agent that speaks the Agent Client Protocol, each in a permission mode you choose.</p>
 
 <h2>Tool Name</h2>
 <p><code>cli_agent</code></p>
 
 <h2>Parameters</h2>
 ${configTable([
-  ['tool', 'string', '—', 'Name of the CLI tool to invoke (e.g., "claude", "gemini")'],
+  ['tool', 'string', '—', 'Name of the CLI tool to invoke (e.g., "claude", "codex", "agy")'],
   ['prompt', 'string', '—', 'The prompt/task to send to the CLI tool'],
   ['working_dir', 'string', 'null', 'Working directory for command execution'],
 ])}
 
-<h2>Default Tools</h2>
-<p>When <code>cli_agents.enabled = true</code> with no explicit tool configs, these defaults are registered (if the command exists on the system):</p>
+<h2>Discovered Agents</h2>
+<p>When <code>cli_agents.enabled = true</code> with no explicit tool configs, these are registered if their command is installed:</p>
 
 <table class="config-table">
-<thead><tr><th>Name</th><th>Command</th><th>Default Args</th></tr></thead>
+<thead><tr><th>Name</th><th>Agent</th><th>Command</th></tr></thead>
 <tbody>
-<tr><td>claude</td><td><code>claude</code></td><td><code>-p --output-format json</code></td></tr>
-<tr><td>gemini</td><td><code>gemini</code></td><td><code>-p --output-format json --sandbox=false</code></td></tr>
-<tr><td>codex</td><td><code>codex</code></td><td><code>exec --json --full-auto</code></td></tr>
-<tr><td>copilot</td><td><code>copilot</code></td><td><code>-p</code></td></tr>
-<tr><td>aider</td><td><code>aider</code></td><td><code>--yes --message</code></td></tr>
+<tr><td>claude</td><td>Claude Code</td><td><code>claude -p --output-format stream-json --verbose</code></td></tr>
+<tr><td>codex</td><td>Codex</td><td><code>codex exec --json</code></td></tr>
+<tr><td>agy</td><td>Antigravity CLI (Agent Client Protocol)</td><td><code>agy acp</code></td></tr>
+<tr><td>gemini</td><td>Gemini CLI (Agent Client Protocol)</td><td><code>gemini --acp</code></td></tr>
+<tr><td>copilot</td><td>Copilot CLI</td><td><code>copilot -p</code></td></tr>
+<tr><td>aider</td><td>Aider</td><td><code>aider --message</code></td></tr>
 </tbody>
 </table>
 
-${callout('info', 'Discovery', 'Only tools whose commands are found via <code>which</code> are registered. Missing tools are silently skipped.')}
+<p>When a call names no tool, the first available of <code>claude</code>, <code>codex</code>, <code>agy</code>, <code>copilot</code>, <code>aider</code> is used. Gemini CLI is not in that order (Google now serves it only to enterprise licences and paid API keys); it is used when named, and its readiness check reports a refused personal sign-in.</p>
+
+<h2>Permission Modes</h2>
+<p>Each coding agent runs in one of three modes, set per agent on the app's Settings page:</p>
+<table class="config-table">
+<thead><tr><th>Mode</th><th>Behavior</th></tr></thead>
+<tbody>
+<tr><td><strong>Checked by AIdaemon</strong> (default)</td><td>Confined to the project folder by the agent's own sandbox; anything beyond it is asked first and judged by your own rules</td></tr>
+<tr><td><strong>Every command checked</strong></td><td>Runs on the machine itself, with every command and file change (except the agent's own short list of read-only commands) asked first</td></tr>
+<tr><td><strong>Full access</strong></td><td>Runs on the machine with nothing asked. Choosing it asks you first.</td></tr>
+</tbody>
+</table>
+<p>Claude Code and Codex ask AIdaemon instead of refusing on their own, so your grants answer what they cover and a card asks the rest. Settings also shows whether each agent can work now (<strong>Ready</strong>, or <strong>Not usable</strong> with its reason and fix, and <strong>Check again</strong>); work is never routed to an agent that cannot run.</p>
+
+<h2>Any Agent Client Protocol agent</h2>
+<p>An agent that speaks the <a href="https://agentclientprotocol.com" target="_blank" rel="noopener">Agent Client Protocol</a> can be added under <code>[cli_agents.tools.&lt;name&gt;]</code> with <code>protocol = "acp"</code>. aidaemon hosts it over the protocol, and each action it takes is asked first, so every one can be judged.</p>
+${codeBlock(`[cli_agents.tools.my-acp-agent]
+command = "my-acp-agent"
+args = ["--acp"]            # whatever starts its protocol server
+protocol = "acp"
+description = "An ACP coding agent"`, 'toml', 'config.toml')}
 
 <h2>Custom Configuration</h2>
 ${codeBlock(`[cli_agents]
@@ -1641,6 +1876,7 @@ command = "/usr/local/bin/my-ai-tool"
 args = ["--json"]
 description = "My custom AI tool"
 timeout_secs = 120`, 'toml', 'config.toml')}
+<p>Setting any <code>[cli_agents.tools.*]</code> entry replaces the discovered list. A stored launch cannot widen what a known agent may do: arguments that would bypass its sandbox or approvals are refused.</p>
 
 <h2>Output Extraction</h2>
 <p>The tool attempts to extract structured output:</p>
@@ -2127,6 +2363,8 @@ When reviewing code, follow these guidelines:
 <h1>Scheduled Tasks</h1>
 <p class="lead">Create recurring and one-shot tasks with natural language or cron expressions. The agent executes the task prompt on schedule.</p>
 
+${callout('info', 'Automations and time zones', 'Ask in plain words and the agent sets it up: <code>set_reminder</code> (a <code>message</code> and a <code>when</code>) for plain reminders, which only message you, and <code>schedule_task</code> for scheduled work. A time or recurring schedule may name an IANA zone (&ldquo;every weekday at 8am Europe/Madrid&rdquo;, &ldquo;2030-07-15 09:00 Asia/Tokyo&rdquo;) and follows its daylight saving; otherwise times are in your own zone. Abbreviations such as &ldquo;EST&rdquo; are refused with a request for the IANA name. A run missed while the daemon was off is recorded as Missed and never counts as a failure.')}
+
 <h2>Tool Name</h2>
 <p><code>scheduler</code></p>
 
@@ -2531,16 +2769,21 @@ ${configTable([
   {
     slug: '/service-install',
     section: 'Service',
-    title: 'systemd & launchd Setup',
-    description: 'Install aidaemon as a systemd or launchd service that starts on boot and runs continuously.',
+    title: 'Run as a Service',
+    description: 'Run aidaemon at login with aidaemon service install (launchd, systemd user unit, Windows logon task), or as a system-wide service.',
     content: () => `
 <h1>Service Installation</h1>
-<p class="lead">Install aidaemon as a system service that starts on boot and runs forever.</p>
+<p class="lead">Keep aidaemon running in the background, starting at login.</p>
 
-<h2>Install Command</h2>
+<h2>For this user (recommended)</h2>
+${codeBlock(`aidaemon service install      # this user, at login, from ~/.aidaemon (--dir to change); starts it now
+aidaemon service uninstall`, 'bash')}
+<p>No administrator rights needed. This is what the app's <strong>Run it here</strong> does on first run: a launchd agent on macOS, a systemd user unit on Linux (lingering is turned on so it outlives your login session), and a logon task on Windows. The macOS app download runs the daemon from inside <code>AIdaemon.app</code> instead.</p>
+
+<h2>System-wide (legacy)</h2>
 ${codeBlock(`./aidaemon install-service`, 'bash')}
 
-<p>This auto-detects the platform and generates the appropriate service configuration.</p>
+<p><code>install-service</code> still writes the system-wide unit on Linux (needs sudo) or the launch agent on macOS without starting it. It auto-detects the platform:</p>
 
 <h2>Linux (systemd)</h2>
 <p>Creates <code>/etc/systemd/system/aidaemon.service</code>:</p>
@@ -2758,6 +3001,8 @@ ${callout('info', 'Dynamic Probes', 'Probes can also be created at runtime by th
 
 <h2>Recent Release Highlights</h2>
 <ul>
+  <li><strong>v0.21.0</strong> &mdash; Read aloud in the app, replies that stream as they are written, Anthropic's one-hour prompt cache kept across deferred tool loads, and fixes for Anthropic base URLs ending in <code>/v1</code> and for Gemini tool calls</li>
+  <li><strong>v0.20.0</strong> &mdash; the AIdaemon app for desktop, web and terminal; macOS, Windows and ARM64 Linux downloads; first run from the app; live views of the agent's browser; coding agent permission modes; project files and project memory; model auto-upgrades; usage meters; schedules in any time zone</li>
   <li><strong>v0.9.2</strong> &mdash; better tool reliability, stronger intent checks, safer background command handling, and path aliases</li>
   <li><strong>v0.9.1</strong> &mdash; improved follow-up context, project scope constraints, graceful stall handling, and hard blocks for dangerous deletes</li>
   <li><strong>v0.9.0</strong> &mdash; consultant system rollout, major agent refactor, shared runtime reloads, and canonical event migration</li>
@@ -2807,6 +3052,7 @@ ${configTable([
 </tbody>
 </table>
 
+${callout('info', 'macOS app download', 'The daemon inside <code>AIdaemon.app</code> does not replace itself: it says when a new version is out, and you install the new <code>.dmg</code> from the <a href="https://github.com/davo20019/aidaemon/releases/latest">latest release</a> to update both.')}
 ${callout('warn', 'Homebrew Users', 'If installed via Homebrew, use <code>brew upgrade aidaemon</code> instead, or set <code>mode = "disable"</code>.')}
 `
   },
