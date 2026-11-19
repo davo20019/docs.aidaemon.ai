@@ -27,11 +27,11 @@ ${callout('success', 'New here?', 'Start with <a href="/getting-started/build">I
   <li><strong>Persistent memory</strong> — SQLite-backed history with semantic search via embeddings</li>
   <li><strong>Multi-model routing</strong> — automatic Fast/Primary/Smart tier selection</li>
   <li><strong>Email triggers</strong> — IMAP IDLE monitoring for inbox notifications</li>
-  <li><strong>Command approval</strong> — interactive Telegram approval for shell commands</li>
+  <li><strong>Command approval</strong> — approve shell commands and other side effects from the app or any connected chat (Telegram, Slack, Discord)</li>
   <li><strong>Skills system</strong> — dynamic prompt enhancement via markdown files</li>
   <li><strong>Self-maintenance</strong> — reads, updates, validates, and restores its own config</li>
   <li><strong>Browser automation</strong> — Chrome with persistent login sessions, screenshots, and form filling</li>
-  <li><strong>Web research</strong> — built-in web search (DuckDuckGo/Brave) and URL fetching</li>
+  <li><strong>Web research</strong> — built-in web search (DuckDuckGo, Brave or your own SearxNG, queried in parallel) and URL fetching</li>
   <li><strong>Sub-agent spawning</strong> — recursive agent delegation for complex tasks</li>
   <li><strong>CLI agent delegation</strong> — delegate to Claude Code, Codex, Antigravity, Gemini, Copilot, Aider, or any ACP agent</li>
   <li><strong>Scheduled tasks</strong> — cron-style recurring tasks with natural language parsing</li>
@@ -44,48 +44,24 @@ ${callout('success', 'New here?', 'Start with <a href="/getting-started/build">I
   <li><strong>Dynamic skills</strong> — install from registries or auto-promote repeated procedures</li>
   <li><strong>Self-updater</strong> — auto-update from GitHub releases with configurable modes</li>
   <li><strong>Discord integration</strong> — slash commands, interactive approval buttons, multi-bot support</li>
-  <li><strong>Command risk assessment</strong> — 4-level risk scoring (Safe/Medium/High/Critical) for terminal commands</li>
+  <li><strong>Command approvals</strong> — a safety check of what each command does decides whether to ask you; cards are rated Safe, Medium, High or Critical</li>
   <li><strong>People intelligence</strong> — a personal contact book that remembers birthdays, preferences, and relationships for you</li>
 </ul>
 
 <h2>Architecture at a Glance</h2>
-${codeBlock(`Telegram ──┐
-Slack    ──┤──> ChannelHub ──> Agent ──> LLM Provider
-Discord  ──┘         │
-                     ├──> Tools
-                     │    ├── terminal (risk assessment)
-                     │    ├── system info
-                     │    ├── memory (facts)
-                     │    ├── config manager
-                     │    ├── web search + fetch
-                     │    ├── browser (optional)
-                     │    ├── file transfer
-                     │    ├── sub-agents + CLI agents
-                     │    ├── health probes
-                     │    ├── manage skills
-                     │    ├── manage people
-                     │    ├── scheduler
-                     │    └── MCP tools (dynamic)
-                     │
-                     ├──> Events
-                     │    ├── immutable event log
-                     │    └── daily consolidation
-                     │
-                     ├──> Goals + Tasks
-                     │    ├── break work into tasks
-                     │    └── track progress + retries
-                     │
-                     ├──> State
-                     │    ├── SQLite persistence
-                     │    └── in-memory working mem
-                     │
-                     └──> Facts
-                          └── injected into system prompt
+${codeBlock(`AIDaemon app ──┐  (desktop, web, terminal: Client Gateway, port 8788)
+Telegram     ──┤
+Slack        ──┼──> Turn runner ──> Turn engine ──> Kernel (aidaemon-core)
+Discord      ──┘                                    │
+                                                    ├──> Model providers (failover chain)
+                                                    ├──> Tools (+ MCP)
+                                                    │      every call: approval + safety hooks
+                                                    ├──> Receipts ──> Run ledger ──> done?
+                                                    └──> Events (SQLite, encrypted)
 
-Triggers ───> EventBus ───> Agent
-   └── IMAP IDLE
-
-Health ───> GET /health (axum)`, 'text', 'architecture')}
+Background (heartbeat): schedules, automations, memory learning, retention
+Triggers: email (IMAP IDLE), treated as untrusted
+Health: GET /health`, 'text', 'architecture')}
 
 <h2>Quick Links</h2>
 <ul>
@@ -165,18 +141,18 @@ ${callout('info', 'If macOS blocks it the first time', 'Open <strong>System Sett
 ${callout('info', 'If Windows SmartScreen warns you', 'Click <strong>More info</strong>, then <strong>Run anyway</strong>.')}
 
 <h2>Linux</h2>
-<p>Open a terminal and run the installer. It downloads the right build for your machine (x86_64 or ARM64), checks it, and installs the app too:</p>
+<p>Open a terminal and run the installer. It downloads the right build for your machine (x86_64 or ARM64), checks it, and installs the app too (its web build goes to <code>~/.aidaemon/app-web</code>):</p>
 ${codeBlock(`curl -sSfL https://get.aidaemon.ai | bash`, 'bash')}
 <p>Or download a release archive yourself and extract it:</p>
 <ul>
   <li>x86_64: <a href="https://github.com/davo20019/aidaemon/releases/latest/download/aidaemon-linux-x86_64.tar.gz"><code>aidaemon-linux-x86_64.tar.gz</code></a></li>
   <li>ARM64 (aarch64): <a href="https://github.com/davo20019/aidaemon/releases/latest/download/aidaemon-linux-aarch64.tar.gz"><code>aidaemon-linux-aarch64.tar.gz</code></a></li>
 </ul>
-<p>Then open the app with <code>aidaemon app</code> (a window) or <code>aidaemon tui</code> (in the terminal).</p>
+<p>Then open the app with <code>aidaemon-app</code> (a window) or <code>aidaemon-app --tui</code> (in the terminal). The first time, it offers <strong>Run it here</strong>, which starts the assistant now and at every login. After that, <code>aidaemon app</code> and <code>aidaemon tui</code> also work when you run them from <code>~/.aidaemon</code>, the assistant's folder.</p>
 
 <h2>Homebrew (macOS or Linux)</h2>
 ${codeBlock(`brew install davo20019/tap/aidaemon`, 'bash')}
-<p>Then run <code>aidaemon app</code>.</p>
+<p>Then run <code>aidaemon-app</code>.</p>
 
 <h2>What happens next</h2>
 <p>The first time the app opens, it starts the assistant on this computer (now and at every login, no administrator password needed) and helps you connect a model. See <a href="/getting-started/wizard">First run</a>.</p>
@@ -185,7 +161,8 @@ ${codeBlock(`brew install davo20019/tap/aidaemon`, 'bash')}
 
 <h3>Cargo</h3>
 <p>For Rust developers:</p>
-${codeBlock(`cargo install --locked --git https://github.com/davo20019/aidaemon aidaemon`, 'bash')}
+${codeBlock(`cargo install --locked aidaemon`, 'bash')}
+<p>This installs the daemon only, built from the AIDaemon SDK crates on crates.io. Build the app from <code>clients/app</code> in a checkout.</p>
 
 <h3>Build from source</h3>
 ${codeBlock(`git clone https://github.com/davo20019/aidaemon.git
@@ -194,11 +171,14 @@ cargo build --release`, 'bash')}
 <p>The binary is at <code>./target/release/aidaemon</code>. The default features are <code>discord</code>, <code>slack</code>, <code>encryption</code>, <code>browser</code>, <code>terminal-bridge</code>, <code>otel</code> and <code>execution-docker</code>. Optional features include <code>computer_use</code> and <code>computer_use-macos</code> (operate native macOS apps) and <code>sdk-memory</code>. The app itself lives in <code>clients/app</code> and is built separately.</p>
 
 <h3>Running on a server</h3>
-<p>On a server, run <code>AIDaemon</code> with no config. It prints a link and a one-time code. Reach the machine's port <code>8788</code> through an SSH tunnel or your own HTTPS tunnel, open the link on your laptop or phone, and finish setup there (the code pairs the first device only):</p>
-${codeBlock(`# on your laptop
+<p>On a server, run <code>aidaemon</code> with no config, from the folder that will hold its config: <code>~/.aidaemon</code>, the folder <code>aidaemon service install</code> uses. It prints a link and a one-time code. Reach the machine's port <code>8788</code> through an SSH tunnel or your own HTTPS tunnel, open the link on your laptop or phone, and finish setup there (the code pairs the first device only):</p>
+${codeBlock(`# on the server
+mkdir -p ~/.aidaemon && cd ~/.aidaemon && aidaemon
+
+# on your laptop
 ssh -L 8788:127.0.0.1:8788 you@your-server
 # then open the printed link in your browser`, 'bash')}
-<p>Prefer a terminal? <code>aidaemon setup</code> connects the model right there. To keep the daemon running, see <a href="/service-install">Run as a service</a>. To reach the app from other devices without SSH, see <a href="/app/gateway">Client Gateway &amp; pairing</a>.</p>
+<p>Prefer a terminal? Run <code>aidaemon setup</code> in that folder to connect the model right there. To keep the daemon running, see <a href="/service-install">Run as a service</a>. To reach the app from other devices without SSH, see <a href="/app/gateway">Client Gateway &amp; pairing</a>.</p>
 
 <h3>Verify a download</h3>
 <p>Every release file has a matching <code>.sha256</code> file on the release page. The one-line installer checks it for you.</p>
@@ -237,18 +217,19 @@ ssh -L 8788:127.0.0.1:8788 you@your-server
 <tr><td>DeepSeek</td><td><code>DEEPSEEK_API_KEY</code></td><td>deepseek-chat / deepseek-chat / deepseek-reasoner</td><td>Per token</td></tr>
 <tr><td>Moonshot AI (Kimi)</td><td><code>MOONSHOT_API_KEY</code></td><td>kimi-k2.5 / kimi-k2.5 / kimi-k2-thinking</td><td>Per token</td></tr>
 <tr><td>MiniMax</td><td><code>MINIMAX_API_KEY</code></td><td>MiniMax-M2.5 / MiniMax-M2.5-highspeed / MiniMax-M2.5</td><td>Per token</td></tr>
-<tr><td>Cloudflare AI Gateway, other OpenAI-compatible</td><td>&mdash;</td><td>Your choice</td><td>Per token</td></tr>
+<tr><td>Another OpenAI-compatible service</td><td>&mdash;</td><td>Your choice</td><td>Per token</td></tr>
 <tr><td>Ollama, llama.cpp</td><td>none</td><td>Listed from your server</td><td>Local</td></tr>
 </tbody>
 </table>
+<p>Cloudflare AI Gateway is not offered at first run; add it afterwards in Settings or in <code>config.toml</code> (see <a href="/providers">Providers</a>).</p>
 <p>These are only the starting picks; the app offers what your account actually lists. See <a href="/providers">Providers</a> for the config each one writes.</p>
 ${callout('info', 'llama.cpp and port 8080', '<code>llama-server</code> and the daemon\'s health check both default to port 8080. Start one of them elsewhere (<code>llama-server --port 8081</code>, or <code>[daemon] health_port</code>) and give llama.cpp\'s address in its form.')}
 
 <h2>3. Your first conversation</h2>
-<p>Your first conversation opens next. Its greeting says what the agent does on its own, what it asks you about first, and offers prompts to press. To talk to your agent from Telegram, Slack or Discord later, use <strong>Settings &rarr; Reach it from your phone</strong>: connect a bot by its token, and that step is done once your first message there has been answered.</p>
+<p>Next comes an optional step, <strong>Reach it from your phone</strong>: connect a Telegram, Slack or Discord bot by its token (the step is done once your first message there has been answered), or press <strong>Not now</strong>. Then your first conversation opens. Its greeting says what the agent does on its own, what it asks you about first, and offers prompts to press. To talk to your agent from Telegram, Slack or Discord later, use <strong>Settings &rarr; Reach it from your phone</strong>: connect a bot by its token, and that step is done once your first message there has been answered.</p>
 
 <h2>Setup from a terminal</h2>
-<p>With no <code>config.toml</code>, <code>AIDaemon</code> runs <em>setup mode</em>: the Client Gateway on its usual loopback address (port 8788) with no agent behind it, plus a one-time link and code for a device elsewhere. The first device to redeem it becomes the owner device. <code>aidaemon setup</code> takes the model step in the terminal instead. The old interactive setup wizard is gone; <code>aidaemon setup low-latency</code> is unchanged.</p>
+<p>With no <code>config.toml</code> in its folder (the folder it is started from), <code>aidaemon</code> runs <em>setup mode</em>: the Client Gateway on its usual loopback address (port 8788) with no agent behind it, plus a one-time link and code for a device elsewhere. The first device to redeem it becomes the owner device. <code>aidaemon setup</code> takes the model step in the terminal instead. The old interactive setup wizard is gone; <code>aidaemon setup low-latency</code> is unchanged. A second daemon on the same machine can take another setup port with <code>AIDAEMON_GATEWAY_PORT</code>.</p>
 `
   },
   {
@@ -264,9 +245,9 @@ ${callout('info', 'llama.cpp and port 8080', '<code>llama-server</code> and the 
 <table class="config-table">
 <thead><tr><th>Where</th><th>How</th></tr></thead>
 <tbody>
-<tr><td>Desktop window</td><td>Open AIDaemon (macOS, Windows), or run <code>aidaemon app</code></td></tr>
-<tr><td>Terminal</td><td><code>aidaemon tui</code></td></tr>
-<tr><td>Browser on this machine</td><td><code>aidaemon web</code> opens the web build and pairs it (confirm in the terminal)</td></tr>
+<tr><td>Desktop window</td><td>Open AIDaemon (macOS, Windows), or run <code>aidaemon-app</code> (Linux). Once it is set up, <code>aidaemon app</code> run from <code>~/.aidaemon</code> works too.</td></tr>
+<tr><td>Terminal</td><td><code>aidaemon-app --tui</code>, or <code>aidaemon tui</code> run from <code>~/.aidaemon</code></td></tr>
+<tr><td>Browser on this machine</td><td><code>aidaemon web</code> (run from <code>~/.aidaemon</code>) opens the web build and pairs it (confirm in the terminal)</td></tr>
 <tr><td>Phone or another computer</td><td>Pair it, then open the gateway's address. See <a href="/app/gateway">Client Gateway &amp; pairing</a>.</td></tr>
 </tbody>
 </table>
@@ -276,7 +257,7 @@ ${callout('info', 'llama.cpp and port 8080', '<code>llama-server</code> and the 
 <ul>
   <li><strong>Replies stream in</strong> as the model writes them (web and desktop).</li>
   <li><strong>Read aloud</strong> &mdash; under a reply, beside Copy, Read aloud speaks it with the system's own voice: the browser's speech in the web app, <code>say</code> on macOS, Windows' built-in voices, and <code>spd-say</code> or <code>espeak-ng</code> (or <code>espeak</code>) on Linux. With none of those installed on Linux there is no button. Code blocks are said as "(code)" and links as their text.</li>
-  <li><strong>Dictation</strong> &mdash; in the web app through the browser's speech recognizer. Pressing Send ends dictation.</li>
+  <li><strong>Dictation</strong> &mdash; in the web app through the browser's speech recognizer, and in the macOS app through the system's recognizer. Pressing Send ends dictation.</li>
   <li><strong>Which model answered</strong> &mdash; under each reply, after its time and Copy, the provider and model that actually wrote it (a failover is named when it answered).</li>
   <li><strong>Edit and Send again</strong> &mdash; every message you sent has Copy, Edit and Send again. Both add a new message at the end, so nothing above is lost.</li>
   <li><strong>Archive</strong> &mdash; archive or bring back a conversation from its menu. Archived ones are under Archived in the sidebar's filter, and search looks through them too. Writing in an archived chat brings it back.</li>
@@ -331,12 +312,12 @@ ${configTable([
   ['enabled', 'bool', 'false', 'Serve the Client Gateway'],
   ['bind', 'string', '"127.0.0.1"', 'Listen address. Must be loopback: a non-loopback bind is refused.'],
   ['port', 'integer', '8788', 'Listen port'],
-  ['token_file', 'string', 'null', 'Where the local token\'s hash is kept. Empty: the daemon\'s default path.'],
+  ['token_file', 'string', 'null', 'Where the local token\'s hash is kept. Empty: <code>~/.aidaemon/client-gateway-token.sha256</code>.'],
   ['retention_days', 'integer', '7', 'Resume window. A client further behind gets a snapshot.'],
   ['max_events', 'integer', '100000', 'Most events the resume log keeps'],
   ['watch_risk_ceiling', 'string', '"medium"', 'Highest risk a paired watch may approve; above it a watch may only deny'],
   ['public_url', 'string', 'null', 'The HTTPS address paired devices use, put in pairing links'],
-  ['app_dir', 'string', 'null', 'Directory of the app\'s web build, served at <code>/client/v1/next/</code>. The installer puts it in <code>~/.aidaemon/app-web</code>.'],
+  ['app_dir', 'string', 'null', 'Directory of the app\'s web build, served at <code>/client/v1/next/</code>. The installer puts it in <code>~/.aidaemon/app-web</code>. Empty: that installed build is served when present.'],
 ])}
 
 <h2>Endpoints</h2>
@@ -348,21 +329,21 @@ ${configTable([
 <p>The current client protocol is <strong>1.39</strong>. Clients resume from their last event without loss or duplicates.</p>
 
 <h2>The local token</h2>
-<p>Apps on the same machine sign in with the local token saved at <code>~/.aidaemon/client-token</code> (owner-only), minted on first use. <code>aidaemon client-token</code> saves it there; add <code>--print</code> to print it for scripts.</p>
+<p>Apps on the same machine sign in with the local token saved at <code>~/.aidaemon/client-token</code> (owner-only), minted on first use. <code>aidaemon client-token</code> mints a new one and saves it there (the old token stops working at once); add <code>--print</code> to print it for scripts. Run <code>aidaemon client-token</code>, <code>aidaemon pair</code> and <code>aidaemon web</code> from <code>~/.aidaemon</code>, the daemon's folder.</p>
 
 <h2>Pairing phones and browsers</h2>
 <ol>
-  <li>Send <code>/pair_device</code> in a chat, or run <code>aidaemon pair</code> in a terminal (it shows a QR code). This makes a single-use code valid for ten minutes.</li>
+  <li>Send <code>/pair_device</code> in a chat, or run <code>aidaemon pair</code> in a terminal from <code>~/.aidaemon</code> (it shows a QR code). This makes a single-use code valid for ten minutes.</li>
   <li>Open the link on the device. It redeems the code with its own key.</li>
   <li>Confirm in that chat or terminal.</li>
 </ol>
-<p>Each paired device gets short-lived tokens carrying its scopes (observe, chat, approve). <code>/devices</code> lists devices and <code>/revoke_device &lt;id&gt;</code> ends a device's tokens and open connections at once.</p>
+<p>Each paired device gets short-lived tokens carrying its scopes (observe, chat, approve, and control for live views). <code>/devices</code> lists devices and <code>/revoke_device &lt;id&gt;</code> ends a device's tokens and open connections at once.</p>
 
 <h2>Reaching it from other devices</h2>
 <p>The gateway only listens on loopback. Let the daemon run the tunnel itself:</p>
 ${codeBlock(`[exposure.client_gateway]
 adapter = "tailscale"        # private to your tailnet; mode = "funnel" makes it public`, 'toml', 'config.toml')}
-<p>Adapters: <code>tailscale</code> (<code>serve</code> or <code>funnel</code>), <code>cloudflare</code> (<code>named</code>, or <code>quick</code> for a throwaway address), <code>manual</code> (the <code>url</code> of a reverse proxy you run) and <code>command</code>. <code>cloudflared</code> or <code>tailscale</code> must be on <code>PATH</code>. Changes apply after a restart; <code>/exposure</code> shows each tunnel's state. An SSH tunnel to port 8788 also works.</p>
+<p>Adapters: <code>tailscale</code> (<code>serve</code> or <code>funnel</code>), <code>cloudflare</code> (<code>named</code>, or <code>quick</code> for a throwaway address), <code>manual</code> (the <code>url</code> of a reverse proxy you run) and <code>command</code>. <code>cloudflared</code> or <code>tailscale</code> must be on <code>PATH</code>, or named with <code>binary = "..."</code>. Changes apply after a restart; <code>/exposure</code> shows each tunnel's state. An SSH tunnel to port 8788 also works.</p>
 `
   },
   {
@@ -379,9 +360,10 @@ ${configTable([
   ['kind', 'string', '"openai_compatible"', 'Provider type: <code>openai_compatible</code>, <code>openai_chatgpt</code>, <code>anthropic</code>, <code>google_genai</code> or <code>xai_native</code>. See <a href="/providers">Providers</a>.'],
   ['api_key', 'string', '—', 'API key for the provider (required)'],
   ['gateway_token', 'string', 'null', 'Optional Cloudflare AI Gateway token used as <code>cf-aig-authorization</code>'],
-  ['base_url', 'string', '—', 'API base URL (required for <code>openai_compatible</code>; optional for <code>anthropic</code>, with or without <code>/v1</code>)'],
+  ['base_url', 'string', '"https://api.openai.com/v1"', 'API base URL (set it for any <code>openai_compatible</code> service other than OpenAI; optional for <code>anthropic</code>, with or without <code>/v1</code>)'],
   ['reasoning_effort', 'string', 'null', 'Extended thinking, e.g. <code>low</code>, <code>medium</code>, <code>high</code>, <code>off</code>'],
-  ['streaming', 'bool', 'false', 'Opt-in SSE streaming transport for OpenAI-compatible providers'],
+  ['max_tokens', 'integer', 'null', 'Output cap per call'],
+  ['extra_headers', 'table', 'null', 'Extra HTTP headers sent with every call (values may be <code>"keychain"</code>)'],
   ['auto_upgrade', 'bool', 'true', 'Move the model in use to the newest version of its line once the provider lists it (checked daily, proven with one tool call first). Pay-per-token providers are only told. See <a href="/providers">Providers</a>.'],
 ])}
 
@@ -393,7 +375,7 @@ ${configTable([
   ['primary', 'string', '(provider default)', 'Default model for general queries'],
   ['fast', 'string', '(provider default)', 'Low-latency model for simple turns (prefer non-reasoning instruct models)'],
   ['smart', 'string', '(provider default)', 'Model for complex execution turns (can be the same as primary)'],
-  ['default', 'string', '—', 'Alternative to <code>primary</code>: the model for normal requests'],
+  ['default', 'string', '—', 'The model for normal requests (<code>primary</code> is the older name for it)'],
   ['fallback', 'array', '[]', 'Ordered models tried when calls fail'],
 ])}
 
@@ -403,7 +385,7 @@ ${callout('warn', 'Fast Tier Guidance', 'Set <code>provider.models.fast</code> t
 <h2>[telegram]</h2>
 ${configTable([
   ['bot_token', 'string', '—', 'Telegram bot token from @BotFather (required)'],
-  ['allowed_user_ids', 'array', '[]', 'Numeric Telegram user IDs allowed to chat. Empty = no restriction.'],
+  ['allowed_user_ids', 'array', '[]', 'Numeric Telegram user IDs allowed to chat. Empty: the first person to message the bot directly becomes its owner, and no one else is allowed.'],
 ])}
 
 <h2>[slack]</h2>
@@ -412,7 +394,7 @@ ${configTable([
   ['enabled', 'bool', 'false', 'Enable the Slack channel'],
   ['app_token', 'string', '—', 'Slack App-Level Token for Socket Mode (<code>xapp-...</code>)'],
   ['bot_token', 'string', '—', 'Slack Bot Token for Web API (<code>xoxb-...</code>)'],
-  ['allowed_user_ids', 'array', '[]', 'Slack user IDs allowed to interact. Empty = no restriction.'],
+  ['allowed_user_ids', 'array', '[]', 'Slack user IDs allowed to interact. Empty: the first person to message the bot directly becomes its owner, and no one else is allowed.'],
   ['use_threads', 'bool', 'true', 'Reply in threads by default'],
 ])}
 
@@ -420,19 +402,32 @@ ${configTable([
 <p>Requires the <code>discord</code> feature flag at compile time. See <a href="/discord">Discord</a> for full setup guide.</p>
 ${configTable([
   ['bot_token', 'string', '&mdash;', 'Discord bot token from the Developer Portal'],
-  ['allowed_user_ids', 'array', '[]', 'Discord user IDs allowed to interact. Empty = no restriction.'],
+  ['allowed_user_ids', 'array', '[]', 'Discord user IDs allowed to interact. Empty: the first person to message the bot directly becomes its owner, and no one else is allowed.'],
   ['guild_id', 'integer', 'null', 'Optional guild/server ID to restrict the bot to a single server'],
 ])}
+
+<p>For more than one bot, use <code>[[telegram_bots]]</code>, <code>[[slack_bots]]</code> or <code>[[discord_bots]]</code>: one entry per bot, with the same token and user keys.</p>
 
 <h2>[state]</h2>
 ${configTable([
   ['db_path', 'string', '"aidaemon.db"', 'Path to SQLite database file'],
   ['working_memory_cap', 'integer', '50', 'Max messages per session kept in memory'],
   ['consolidation_interval_hours', 'integer', '6', 'Hours between memory consolidation runs'],
-  ['max_facts', 'integer', '100', 'Maximum number of facts injected into the system prompt'],
+  ['max_facts', 'integer', '20', 'Maximum number of facts injected into the system prompt'],
   ['daily_token_budget', 'integer', 'null', 'Ignored since 0.20.0 (logged once at startup). Cap spend with a provider spend limit; per-goal budgets and <code>subagents.task_token_budget</code> still apply.'],
   ['encryption_key', 'string', 'null', 'SQLCipher encryption key (requires <code>encryption</code> feature). AES-256 at rest.'],
   ['upgrade_backups', 'integer', '2', 'Snapshots kept in <code>backups/</code> next to the database, one written when a new aidaemon version first starts on it. <code>0</code> turns it off.'],
+])}
+
+<h3>[state.retention]</h3>
+<p>Automatic cleanup of old data, in days. <code>0</code> turns cleanup off for that kind.</p>
+${configTable([
+  ['messages_days', 'integer', '90', 'Consolidated messages'],
+  ['diagnostic_events_days', 'integer', '7', 'Consolidated diagnostic and tool events'],
+  ['superseded_facts_days', 'integer', '90', 'Older versions of facts'],
+  ['token_usage_aggregate_days', 'integer', '30', 'Raw token usage is folded into daily totals after this'],
+  ['episodes_days', 'integer', '365', 'Episodes never recalled'],
+  ['goals_days', 'integer', '180', 'Completed or abandoned goals'],
 ])}
 
 <h2>[memory]</h2>
@@ -450,18 +445,20 @@ ${configTable([
   ['initial_timeout_secs', 'integer', '30', 'Timeout in seconds for initial command execution'],
   ['max_output_chars', 'integer', '4000', 'Truncate command output beyond this length'],
   ['permission_mode', 'string', '"default"', 'Risk permission mode: <code>default</code>, <code>cautious</code>, or <code>yolo</code>. See <a href="/tools/command-risk">Command Risk</a>.'],
+  ['confinement', 'string', '"host"', '<code>host</code> runs commands as you; <code>sandbox</code> runs each one in the OS sandbox (seatbelt on macOS, bubblewrap or the Codex sandbox on Linux) with task-scoped file and network access'],
 ])}
 
 <p>Default allowed prefixes:</p>
 ${codeBlock(`ls, cat, head, tail, echo, date, whoami, pwd, find, wc,
 grep, tree, file, stat, uname, df, du, ps, which, env, printenv`, 'text')}
 
-${callout('warn', 'Shell Operators', 'Commands containing <code>;</code> <code>|</code> <code>&amp;&amp;</code> <code>||</code> <code>$()</code> or backticks <strong>always</strong> require approval, even if the prefix is whitelisted.')}
+${callout('warn', 'Shell Operators', 'A chained command (<code>;</code> <code>|</code> <code>&amp;&amp;</code> <code>||</code>) runs without asking only when every part starts with a program in <code>allowed_prefixes</code>. Commands with <code>$()</code> or backticks, redirections into files, or programs launched through another program always ask.')}
 
 <h2>[daemon]</h2>
 ${configTable([
   ['health_port', 'integer', '8080', 'Port for the health check HTTP endpoint'],
   ['health_bind', 'string', '"127.0.0.1"', 'Bind address. Use "0.0.0.0" for external access.'],
+  ['dashboard_enabled', 'bool', 'true', 'Also serve the OAuth callback and the mandate wake webhook on the health port'],
 ])}
 
 <h2>[triggers.email]</h2>
@@ -477,6 +474,8 @@ ${configTable([
 ${configTable([
   ['command', 'string', '—', 'Executable path or name for the MCP server'],
   ['args', 'array', '[]', 'Command-line arguments'],
+  ['env', 'table', '{}', 'Environment variables for the server'],
+  ['read_only_tools', 'array', '[]', 'Tools of this server you declare read-only; their calls are not asked first'],
 ])}
 
 <h2>[browser]</h2>
@@ -488,6 +487,7 @@ ${configTable([
   ['user_data_dir', 'string', '~/.aidaemon/chrome-profile', 'Chrome profile directory for persistent sessions'],
   ['profile', 'string', 'Default', 'Chrome profile name within user_data_dir'],
   ['remote_debugging_port', 'integer', 'null', 'Connect to existing Chrome on this port (advanced)'],
+  ['keep_sign_ins', 'bool', 'true', 'Keep sign-ins in the agent\'s own browser profile, so you sign in to a site once'],
 ])}
 
 <h2>[skills]</h2>
@@ -501,9 +501,9 @@ ${configTable([
 ${configTable([
   ['enabled', 'bool', 'true', 'Allow the agent to spawn sub-agents'],
   ['max_depth', 'integer', '3', 'Maximum nesting level for sub-agent recursion'],
-  ['max_iterations', 'integer', '10', 'Max agentic loop steps per sub-agent invocation'],
+  ['max_iterations', 'integer', '10', 'Legacy. Sub-agents have no step limit by default; setting this (or <code>max_iterations_cap</code>, default 25) switches to a hard limit.'],
   ['max_response_chars', 'integer', '8000', 'Truncate sub-agent responses beyond this length'],
-  ['timeout_secs', 'integer', '300', 'Sub-agent execution timeout in seconds'],
+  ['timeout_secs', 'integer', '300', 'Seconds a sub-agent may go without progress (no tool call, no model reply) before it is stopped. It never limits total run time.'],
 ])}
 
 <h2>[client_gateway]</h2>
@@ -532,7 +532,7 @@ ${configTable([
 <h2>[cli_agents]</h2>
 ${configTable([
   ['enabled', 'bool', 'false', 'Enable CLI agent delegation tool'],
-  ['timeout_secs', 'integer', '600', 'Global timeout for CLI agent execution'],
+  ['timeout_secs', 'integer', '600', 'After this long a CLI agent keeps running in the background, and its result is delivered when it finishes'],
   ['max_output_chars', 'integer', '16000', 'Global max output length from CLI agents'],
 ])}
 
@@ -548,24 +548,18 @@ ${configTable([
 
 <h2>[search]</h2>
 ${configTable([
-  ['backend', 'string', '"duckduckgo"', 'Search backend: <code>duckduckgo</code> (no key needed) or <code>brave</code>'],
+  ['backend', 'string', '"duckduckgo"', 'Search backend: <code>duckduckgo</code> (no key needed), <code>brave</code> or <code>searxng</code>'],
   ['api_key', 'string', '""', 'API key for Brave search (supports <code>"keychain"</code>)'],
+  ['searxng_url', 'string', '""', 'Address of your own SearxNG instance'],
+  ['parallel', 'bool', 'true', 'Query every configured backend at once and merge the results'],
 ])}
 
-<h2>[scheduler]</h2>
+<h2>[heartbeat]</h2>
+<p>Runs scheduled tasks and background work. Schedules are created by asking the agent in chat or in the app, not in this file; an old <code>[scheduler]</code> section is ignored. See <a href="/scheduler">Scheduled Tasks</a>.</p>
 ${configTable([
-  ['enabled', 'bool', 'true', 'Enable the scheduled tasks system'],
-  ['tick_interval_secs', 'integer', '30', 'How often the scheduler checks for due tasks'],
-])}
-
-<h2>[[scheduler.tasks]]</h2>
-<p>Pre-defined scheduled tasks loaded from config on startup:</p>
-${configTable([
-  ['name', 'string', '—', 'Human-readable task label'],
-  ['schedule', 'string', '—', 'Natural language or cron expression (see <a href="/scheduler">Scheduler</a>)'],
-  ['prompt', 'string', '—', 'What the agent should do when the task fires'],
-  ['oneshot', 'bool', 'false', 'Fire once then auto-delete'],
-  ['trusted', 'bool', 'false', 'Run with full autonomy (no terminal approval needed)'],
+  ['enabled', 'bool', 'true', 'Run scheduled and background work'],
+  ['tick_interval_secs', 'integer', '30', 'How often due work is checked'],
+  ['max_concurrent_llm_tasks', 'integer', '3', 'Most model-backed tasks running at once'],
 ])}
 
 <h2>[files]</h2>
@@ -577,11 +571,34 @@ ${configTable([
   ['retention_hours', 'integer', '24', 'Hours to retain received files before cleanup'],
 ])}
 
+<h2>[agent]</h2>
+${configTable([
+  ['name', 'string', '"aidaemon"', 'The assistant\'s name'],
+  ['persona_file', 'string', 'null', 'Markdown persona file (relative paths resolve next to <code>config.toml</code>)'],
+])}
+
+<h2>[execution]</h2>
+<p>Where the agent's commands and file tools run.</p>
+${configTable([
+  ['backend', 'string', '"local"', '<code>local</code>, <code>docker</code> (settings in <code>[execution.docker]</code>) or <code>ssh</code> (settings in <code>[execution.ssh]</code>)'],
+  ['workspace_root', 'string', 'null', 'Working directory for relative paths. Local default: the daemon\'s folder.'],
+  ['allow_outside_workspace', 'bool', 'true (local)', 'Let path-based tools reach outside <code>workspace_root</code>. Defaults to false for remote backends.'],
+])}
+
+<h2>[checkpoints]</h2>
+<p>Beta: a shadow-Git snapshot of the workspace before the first file change in each turn. <code>enabled = false</code> by default.</p>
+
+<h2>[computer_use]</h2>
+<p>Operating native macOS apps (build with <code>--features computer_use-macos</code>). <code>enabled = false</code> by default.</p>
+
+<h2>[exposure.client_gateway]</h2>
+<p>A tunnel the daemon runs so other devices can reach the app. See <a href="/app/gateway">Client Gateway &amp; Pairing</a>.</p>
+
 <h2>Secrets Management</h2>
 <p>Sensitive config values support two resolution methods beyond plain text, plus an optional env-only storage mode:</p>
 
 <h3>OS Keychain</h3>
-<p>Set any secret field to <code>"keychain"</code> to resolve it from the OS keychain (macOS Keychain, Linux secret-service):</p>
+<p>Set any secret field to <code>"keychain"</code> to resolve it from the OS keychain (macOS Keychain, Windows Credential Manager, Linux secret-service):</p>
 ${codeBlock(`[provider]
 api_key = "keychain"    # Resolved from keychain entry "api_key"
 
@@ -623,10 +640,22 @@ ${callout('warning', 'Env-only Security', 'Keep the env file private (<code>chmo
 
 ${callout('info', 'Supported Keychain Fields', 'Fields supporting <code>"keychain"</code>: <code>provider.api_key</code>, <code>provider.gateway_token</code>, <code>telegram.bot_token</code>, <code>slack.app_token</code>, <code>slack.bot_token</code>, <code>discord.bot_token</code>, <code>triggers.email.password</code>, <code>state.encryption_key</code>, <code>search.api_key</code>, and <code>http_auth.*</code> profile fields.')}
 
+<p>The keychain entry each field reads (the name to give <code>aidaemon keychain set</code>):</p>
+<ul>
+  <li><code>provider.api_key</code> &rarr; <code>api_key</code>; the first <code>[[provider.fallbacks]]</code> entry &rarr; <code>provider_fallback_0_api_key</code></li>
+  <li><code>provider.gateway_token</code> &rarr; <code>gateway_token</code></li>
+  <li><code>telegram.bot_token</code> &rarr; <code>bot_token</code></li>
+  <li><code>slack.app_token</code> / <code>slack.bot_token</code> &rarr; <code>slack_app_token</code> / <code>slack_bot_token</code></li>
+  <li><code>discord.bot_token</code> &rarr; <code>discord_bot_token</code></li>
+  <li><code>triggers.email.password</code> &rarr; <code>email_password</code></li>
+  <li><code>state.encryption_key</code> &rarr; <code>encryption_key</code></li>
+  <li><code>search.api_key</code> &rarr; <code>search_api_key</code></li>
+</ul>
+
 <h2>[health]</h2>
 <p>Health monitoring system. See <a href="/health-monitoring">Health Monitoring</a>.</p>
 ${configTable([
-  ['enabled', 'bool', 'true', 'Enable the health monitoring system'],
+  ['enabled', 'bool', 'false', 'Enable the health monitoring system'],
   ['tick_interval_secs', 'integer', '30', 'How often to check for due probes'],
   ['result_retention_days', 'integer', '7', 'Days to retain health check results'],
 ])}
@@ -634,7 +663,7 @@ ${configTable([
 <h2>[[health.probes]]</h2>
 ${configTable([
   ['name', 'string', '&mdash;', 'Probe name'],
-  ['probe_type', 'string', '&mdash;', 'Type: http, command, file, or port'],
+  ['type', 'string', '&mdash;', 'Probe type: <code>http</code>, <code>command</code>, <code>file</code> or <code>port</code> (<code>tcp</code>)'],
   ['target', 'string', '&mdash;', 'Target URL, command, file path, or host:port'],
   ['schedule', 'string', '&mdash;', 'Cron expression or interval'],
   ['consecutive_failures_alert', 'integer', '3', 'Alert after N consecutive failures'],
@@ -654,9 +683,6 @@ ${configTable([
 <p>People Intelligence — a personal contact book managed by your assistant. See <a href="/tools/people">People Intelligence</a>.</p>
 ${configTable([
   ['enabled', 'bool', 'false', 'Initial state for people intelligence (can be toggled at runtime via chat)'],
-  ['auto_extract', 'bool', 'true', 'Automatically learn facts about people from conversations'],
-  ['auto_extract_categories', 'string[]', '["birthday", "preference", "interest", "work", "family", "important_date"]', 'Fact categories that can be auto-extracted'],
-  ['restricted_categories', 'string[]', '["health", "finance", "political", "religious"]', 'Categories that are never auto-extracted'],
   ['fact_retention_days', 'integer', '180', 'Days before unconfirmed auto-extracted facts are pruned'],
   ['reconnect_reminder_days', 'integer', '30', 'Days of inactivity before suggesting a reconnect'],
 ])}
@@ -667,9 +693,9 @@ kind = "google_genai"
 api_key = "AIza..."
 
 [provider.models]
-primary = "gemini-3-flash-preview"
-fast = "gemini-2.5-flash-lite"
-smart = "gemini-3-pro-preview"
+primary = "gemini-4-hydrogen"
+fast = "gemini-3.5-flash-lite"
+smart = "gemini-4-argon"
 
 [telegram]
 bot_token = "123456:ABC-DEF..."
@@ -696,7 +722,7 @@ health_port = 8080
 
 [mcp.filesystem]
 command = "npx"
-args = ["-y", "@anthropic/mcp-filesystem"]
+args = ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/allowed/dir"]
 
 [browser]
 enabled = true
@@ -708,15 +734,6 @@ enabled = true
 
 [search]
 backend = "duckduckgo"
-
-[scheduler]
-enabled = true
-
-[[scheduler.tasks]]
-name = "Morning check-in"
-schedule = "weekdays at 9am"
-prompt = "Check system health and summarize any overnight alerts"
-trusted = true
 
 [files]
 enabled = true
@@ -734,7 +751,7 @@ enabled = true
 
 [[health.probes]]
 name = "API Server"
-probe_type = "http"
+type = "http"
 target = "https://api.example.com/health"
 schedule = "every 5m"
 
@@ -764,7 +781,7 @@ mode = "check_only"`, 'toml', 'config.toml')}
 <tr><td><code>anthropic</code></td><td>Anthropic's native Messages API</td></tr>
 <tr><td><code>google_genai</code></td><td>Google Gemini's native API</td></tr>
 <tr><td><code>xai_native</code></td><td>xAI (Grok)</td></tr>
-<tr><td><code>openai_compatible</code> (default)</td><td>OpenAI, OpenRouter, DeepSeek, Moonshot, MiniMax, Cloudflare AI Gateway, Ollama, llama.cpp and any OpenAI-compatible API</td></tr>
+<tr><td><code>openai_compatible</code> (default; <code>base_url</code> defaults to <code>https://api.openai.com/v1</code>)</td><td>OpenAI, OpenRouter, DeepSeek, Moonshot, MiniMax, Cloudflare AI Gateway, Ollama, llama.cpp and any OpenAI-compatible API</td></tr>
 </tbody>
 </table>
 <p><code>api_key = "keychain"</code> reads the key from the OS keychain; <code>api_key = "\${ENV_VAR}"</code> reads it from the environment. See <a href="/configuration">Secrets Management</a>.</p>
@@ -833,7 +850,7 @@ fast = "grok-4"
 smart = "grok-4"`, 'toml')}
 
 <h2>OpenRouter</h2>
-<p>Models from many providers through one key and the OpenAI-compatible format. Settings shows the key's balance.</p>
+<p>Models from many providers through one key and the OpenAI-compatible format. Settings shows the key's balance. The provider list also has <strong>Anthropic (via OpenRouter)</strong> (<code>anthropic/claude-sonnet-4</code>, <code>anthropic/claude-haiku-4</code>, <code>anthropic/claude-opus-4</code> with an OpenRouter key), offered in Settings but not at first run.</p>
 ${codeBlock(`[provider]
 kind = "openai_compatible"
 api_key = "keychain"
@@ -899,7 +916,7 @@ base_url = "http://localhost:11434/v1"   # Ollama
 
 [provider.models]
 primary = "your-model-id"`, 'toml')}
-${callout('warn', 'Local addresses', 'HTTP is only allowed to localhost addresses. <code>llama-server</code> and the daemon\'s health check both default to port 8080: move one of them (<code>llama-server --port 8081</code>, or <code>[daemon] health_port</code>).')}
+${callout('warn', 'Local addresses', 'Use HTTPS for any server that is not on this machine: the key is sent with every request. <code>llama-server</code> and the daemon\'s health check both default to port 8080: move one of them (<code>llama-server --port 8081</code>, or <code>[daemon] health_port</code>).')}
 
 <h2>Fallback providers</h2>
 <p>Entries under <code>[[provider.fallbacks]]</code> are tried in order after the main provider's own models. A provider whose account cannot answer (a plan's usage limit, a daily quota, no credit, a rejected key) is skipped at once and stays skipped until its stated reset. Switching the main provider in Settings keeps the old one as a failover.</p>
@@ -3132,14 +3149,13 @@ aidaemon service uninstall`, 'bash')}
 <h2>System-wide (legacy)</h2>
 ${codeBlock(`./aidaemon install-service`, 'bash')}
 
-<p><code>install-service</code> still writes the system-wide unit on Linux (needs sudo) or the launch agent on macOS without starting it. It auto-detects the platform:</p>
+<p><code>install-service</code> still writes the system-wide unit on Linux (needs sudo) or the launch agent on macOS, and prints the commands to start it; it starts nothing itself. On Windows it is not available: use <code>aidaemon service install</code>. It auto-detects the platform:</p>
 
 <h2>Linux (systemd)</h2>
 <p>Creates <code>/etc/systemd/system/aidaemon.service</code>:</p>
 ${codeBlock(`[Unit]
-Description=aidaemon AI Agent
-After=network-online.target
-Wants=network-online.target
+Description=aidaemon - AI personal daemon
+After=network.target
 
 [Service]
 Type=simple
@@ -3151,12 +3167,12 @@ RestartSec=10
 [Install]
 WantedBy=multi-user.target`, 'ini', 'aidaemon.service')}
 
-<p>Then enables and starts the service:</p>
+<p>It prints the commands to enable and start it; run them yourself:</p>
 ${codeBlock(`sudo systemctl daemon-reload
 sudo systemctl enable --now aidaemon`, 'bash')}
 
 <h2>macOS (launchd)</h2>
-<p>Creates <code>$HOME/Library/LaunchAgents/ai.aidaemon.plist</code>:</p>
+<p>Copies the binary into a signed <code>~/Applications/aidaemon.app</code> (so macOS permission grants survive rebuilds; the app download uses its own signed helper instead) and creates <code>$HOME/Library/LaunchAgents/ai.aidaemon.plist</code>:</p>
 ${codeBlock(`<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
   "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -3166,23 +3182,28 @@ ${codeBlock(`<?xml version="1.0" encoding="UTF-8"?>
     <string>ai.aidaemon</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/full/path/to/aidaemon</string>
+        <string>/Users/you/Applications/aidaemon.app/Contents/MacOS/aidaemon</string>
     </array>
+    <key>WorkingDirectory</key>
+    <string>/path/to/config/dir</string>
     <key>RunAtLoad</key>
     <true/>
     <key>KeepAlive</key>
     <true/>
     <key>StandardOutPath</key>
-    <string>/tmp/aidaemon.stdout.log</string>
+    <string>/dev/null</string>
     <key>StandardErrorPath</key>
-    <string>/tmp/aidaemon.stderr.log</string>
+    <string>/Users/you/Library/Logs/aidaemon/stderr.log</string>
 </dict>
 </plist>`, 'xml', 'ai.aidaemon.plist')}
 
-<p>Then loads the service:</p>
-${codeBlock(`launchctl load ~/Library/LaunchAgents/ai.aidaemon.plist`, 'bash')}
+<p>Then load it, and grant Accessibility and Screen Recording to aidaemon if you use computer use:</p>
+${codeBlock(`launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/ai.aidaemon.plist`, 'bash')}
 
-${callout('warning', 'Prevent macOS Sleep', 'macOS may suspend background processes when the system sleeps. To keep aidaemon running continuously, use <code>caffeinate</code>:<br><br><code>caffeinate -s aidaemon</code><br><br>The <code>-s</code> flag prevents sleep while the process is running. You can also use <code>caffeinate -i</code> to prevent idle sleep without keeping the display on. If running as a launchd service, add <code>caffeinate -s</code> before the binary path in your plist <code>ProgramArguments</code>.')}
+${callout('info', 'macOS sleep', 'On macOS the daemon keeps the Mac from idle-sleeping while it runs (it starts <code>caffeinate -i</code> for itself). Do not wrap the binary in <code>caffeinate</code> in the plist: that breaks the permission grants computer use needs.')}
+
+<h2>Logs</h2>
+<p>A daemon running in the background writes a size-rotated, owner-only log to <code>~/Library/Logs/aidaemon/stdout.log</code> on macOS and <code>~/.local/state/aidaemon/stdout.log</code> elsewhere (under <code>$XDG_STATE_HOME</code> when set). Set <code>AIDAEMON_LOG_DIR</code> to change the folder. On Linux, <code>journalctl --user -u aidaemon</code> shows why the service stopped.</p>
 
 <h2>Health Check</h2>
 <p>Once running as a service, verify with:</p>
@@ -3408,7 +3429,7 @@ ${callout('info', 'Probes at runtime', 'With probes on, the agent can create, li
     slug: '/updates',
     section: 'Updates',
     title: 'Self-Updater',
-    description: 'Auto-update aidaemon from GitHub releases. Three modes: notify, download, or auto-install.',
+    description: 'Auto-update aidaemon from GitHub releases. Three modes: enable (install automatically), check_only (ask first) and disable.',
     content: () => `
 <h1>Self-Updater</h1>
 <p class="lead">aidaemon can check for new releases on GitHub and update itself automatically.</p>
@@ -3417,9 +3438,7 @@ ${callout('info', 'Probes at runtime', 'With probes on, the agent can create, li
 <ul>
   <li><strong>v0.21.0</strong> &mdash; Read aloud in the app, replies that stream as they are written, Anthropic's one-hour prompt cache kept across deferred tool loads, and fixes for Anthropic base URLs ending in <code>/v1</code> and for Gemini tool calls</li>
   <li><strong>v0.20.0</strong> &mdash; the AIDaemon app for desktop, web and terminal; macOS, Windows and ARM64 Linux downloads; first run from the app; live views of the agent's browser; coding agent permission modes; project files and project memory; model auto-upgrades; usage meters; schedules in any time zone</li>
-  <li><strong>v0.9.2</strong> &mdash; better tool reliability, stronger intent checks, safer background command handling, and path aliases</li>
-  <li><strong>v0.9.1</strong> &mdash; improved follow-up context, project scope constraints, graceful stall handling, and hard blocks for dangerous deletes</li>
-  <li><strong>v0.9.0</strong> &mdash; consultant system rollout, major agent refactor, shared runtime reloads, and canonical event migration</li>
+  <li><strong>v0.12.9</strong> &mdash; memory fixes: scheduled runs no longer write their instructions into your memory, automated extractors cannot overwrite what you said, and paraphrased duplicates are folded</li>
 </ul>
 
 <h2>Update Modes</h2>
@@ -3457,12 +3476,15 @@ ${configTable([
   <li><strong>Restart</strong> &mdash; exits with code 75 to trigger service restart</li>
 </ol>
 
+<p>Check by hand with <code>aidaemon check-update</code>.</p>
+
 <h2>Platform Support</h2>
 <table class="config-table">
 <thead><tr><th>Platform</th><th>Architecture</th></tr></thead>
 <tbody>
 <tr><td>Linux</td><td>x86_64, aarch64</td></tr>
 <tr><td>macOS</td><td>x86_64, aarch64</td></tr>
+<tr><td>Windows</td><td>No self-update: download the new zip</td></tr>
 </tbody>
 </table>
 
@@ -3477,7 +3499,7 @@ ${callout('warn', 'Homebrew Users', 'If installed via Homebrew, use <code>brew u
     description: 'Deploy your own terminal broker on Cloudflare Workers for full control over the relay infrastructure between Telegram and your local machine.',
     content: () => `
 <h1>Self-Hosting the Terminal Broker</h1>
-<p class="lead">The terminal feature lets you run CLI agents (Claude, Codex, Gemini) directly from Telegram. By default it uses the shared hosted broker at <code>terminal.aidaemon.ai</code>. Self-hosting gives you full control over the relay infrastructure.</p>
+<p class="lead">The terminal feature lets you run CLI agents (Codex, Claude, Gemini, OpenCode) directly from Telegram. By default it uses the shared hosted broker at <code>terminal.aidaemon.ai</code>. Self-hosting gives you full control over the relay infrastructure.</p>
 
 <h2>Architecture</h2>
 <p>The terminal system has three components:</p>
@@ -3504,7 +3526,7 @@ ${callout('info', 'End-to-End Encryption', 'The broker is a transparent relay &m
   <li><strong>Cloudflare account</strong> &mdash; free tier is sufficient for personal use</li>
   <li><strong>A Telegram bot</strong> &mdash; created via <a href="https://t.me/BotFather" target="_blank" rel="noopener">@BotFather</a></li>
   <li><strong>aidaemon installed and running</strong> &mdash; with the Telegram channel configured (<a href="/telegram">Telegram setup guide</a>)</li>
-  <li><strong>Node.js 18+</strong> and <strong>npm</strong> &mdash; for the <a href="https://developers.cloudflare.com/workers/wrangler/" target="_blank" rel="noopener">wrangler CLI</a></li>
+  <li><strong>Node.js 20+</strong> and <strong>npm</strong> &mdash; for the <a href="https://developers.cloudflare.com/workers/wrangler/" target="_blank" rel="noopener">wrangler CLI</a></li>
 </ul>
 
 <h2>Step 1 &mdash; Clone the Broker</h2>
@@ -3519,41 +3541,38 @@ npm install`, 'bash')}
 <h3>Option A: workers.dev Subdomain (Simplest)</h3>
 <p>If you don't have a custom domain, use Cloudflare's free <code>*.workers.dev</code> subdomain. Comment out or remove the <code>routes</code> block:</p>
 ${codeBlock(`name = "terminal-broker"
-main = "src/index.js"
-compatibility_date = "2024-12-05"
-compatibility_flags = ["nodejs_compat"]
+main = "src/worker.js"
+compatibility_date = "2026-03-01"
+workers_dev = true
 
 # No routes block = uses your-name.workers.dev
 # Your broker URL will be: https://terminal-broker.<your-subdomain>.workers.dev
 
-[durable_objects]
-bindings = [
-  { name = "TERMINAL_SESSION", class_name = "TerminalSession" }
-]
+[[durable_objects.bindings]]
+name = "SESSION_STORE"
+class_name = "UserSessionStore"
 
 [[migrations]]
 tag = "v1"
-new_classes = ["TerminalSession"]`, 'toml', 'wrangler.toml (workers.dev)')}
+new_sqlite_classes = ["UserSessionStore"]`, 'toml', 'wrangler.toml (workers.dev)')}
 
 <h3>Option B: Custom Domain</h3>
 <p>If you have a domain on Cloudflare DNS, set up a route to it:</p>
 ${codeBlock(`name = "terminal-broker"
-main = "src/index.js"
-compatibility_date = "2024-12-05"
-compatibility_flags = ["nodejs_compat"]
+main = "src/worker.js"
+compatibility_date = "2026-03-01"
 
 routes = [
-  { pattern = "terminal.yourdomain.com", zone_name = "yourdomain.com" }
+  { pattern = "terminal.example.com", zone_name = "example.com", custom_domain = true }
 ]
 
-[durable_objects]
-bindings = [
-  { name = "TERMINAL_SESSION", class_name = "TerminalSession" }
-]
+[[durable_objects.bindings]]
+name = "SESSION_STORE"
+class_name = "UserSessionStore"
 
 [[migrations]]
 tag = "v1"
-new_classes = ["TerminalSession"]`, 'toml', 'wrangler.toml (custom domain)')}
+new_sqlite_classes = ["UserSessionStore"]`, 'toml', 'wrangler.toml (custom domain)')}
 
 ${callout('info', 'Cloudflare DNS Required', 'Custom domains must be managed by Cloudflare DNS (orange-cloud proxied). If your domain is on another registrar, you can either transfer it or add it as a <a href="https://developers.cloudflare.com/dns/zone-setups/" target="_blank" rel="noopener">Cloudflare zone</a>.')}
 
@@ -3584,7 +3603,7 @@ ${configTable([
 
 <h2>Step 4 &mdash; Deploy</h2>
 <p>Deploy the broker to Cloudflare Workers:</p>
-${codeBlock(`npx wrangler deploy`, 'bash')}
+${codeBlock(`npx wrangler deploy   # or: npm run deploy`, 'bash')}
 
 <p>You should see output like this:</p>
 ${codeBlock(`Uploaded terminal-broker (3.45 sec)
@@ -3592,18 +3611,20 @@ Published terminal-broker (0.35 sec)
   https://terminal-broker.your-subdomain.workers.dev
 Current Deployment ID: abc12345-...`, 'text', 'deploy output')}
 
-${callout('info', 'Durable Object Migration', 'The first deploy automatically creates the Durable Object migration for <code>TerminalSession</code>. No manual migration steps are needed.')}
+${callout('info', 'Durable Object Migration', 'The first deploy automatically creates the Durable Object migration for <code>UserSessionStore</code>. No manual migration steps are needed.')}
 
 <h2>Step 5 &mdash; Configure aidaemon</h2>
 <p>Point your aidaemon daemon at your self-hosted broker. Update your <code>config.toml</code>:</p>
 
 ${codeBlock(`[terminal]
-web_app_url = "https://your-broker.your-domain.com"
-daemon_ws_url = "wss://your-broker.your-domain.com/v1/ws/daemon"`, 'toml', 'config.toml')}
+web_app_url = "https://terminal.example.com"
+daemon_ws_url = "wss://terminal.example.com/v1/ws/daemon"`, 'toml', 'config.toml')}
 
 <p>Or use environment variables:</p>
-${codeBlock(`export AIDAEMON_TERMINAL_WEB_APP_URL="https://your-broker.your-domain.com"
-export AIDAEMON_TERMINAL_BROKER_URL="wss://your-broker.your-domain.com/v1/ws/daemon"`, 'bash')}
+${codeBlock(`export AIDAEMON_TERMINAL_WEB_APP_URL="https://terminal.example.com"
+export AIDAEMON_TERMINAL_BROKER_URL="wss://terminal.example.com/v1/ws/daemon"`, 'bash')}
+
+<p>Other overrides the daemon reads: <code>AIDAEMON_TERMINAL_BRIDGE_ENABLED</code> (or <code>[terminal] bridge_enabled</code>, default true), <code>AIDAEMON_TERMINAL_DAEMON_TOKEN</code>, <code>AIDAEMON_TERMINAL_USER_ID</code>, <code>AIDAEMON_TERMINAL_DEVICE_ID</code> and <code>AIDAEMON_TERMINAL_SHELL</code>.</p>
 
 <p>Restart aidaemon after changing the configuration for the new values to take effect.</p>
 
@@ -3628,12 +3649,12 @@ ${callout('warn', 'HTTPS Required', 'Telegram requires the Mini App URL to use H
 <p>Confirm everything is working:</p>
 
 <h3>1. Health Check</h3>
-${codeBlock(`curl https://your-broker.your-domain.com/health`, 'bash')}
+${codeBlock(`curl https://terminal.example.com/health`, 'bash')}
 <p>Expected response:</p>
 ${codeBlock(`{
   "ok": true,
-  "service": "your-broker.your-domain.com",
-  "version": "1.0.0",
+  "service": "terminal.example.com",
+  "mode": "broker-e2ee-bridge",
   "timestamp": "2026-03-01T12:00:00.000Z"
 }`, 'json', 'health response')}
 
@@ -3641,8 +3662,9 @@ ${codeBlock(`{
 <p>Send <code>/terminal</code> to your bot in Telegram. The Mini App should open and display the terminal interface.</p>
 
 <h3>3. Check aidaemon Logs</h3>
-<p>Look for the terminal bridge connection in your aidaemon logs:</p>
-${codeBlock(`[INFO] Connecting terminal bridge to broker: wss://your-broker.your-domain.com/v1/ws/daemon`, 'text', 'aidaemon logs')}
+<p>Look for the terminal bridge connection in your aidaemon logs (<code>~/Library/Logs/aidaemon/stdout.log</code> on macOS, <code>~/.local/state/aidaemon/stdout.log</code> elsewhere):</p>
+${codeBlock(`INFO Connecting terminal bridge to broker
+INFO Terminal bridge connected`, 'text', 'aidaemon logs')}
 
 ${callout('success', 'All Set', 'If the health check returns <code>"ok": true</code>, the Mini App opens in Telegram, and aidaemon logs show the broker connection &mdash; your self-hosted terminal is fully operational.')}
 
@@ -3651,20 +3673,24 @@ ${callout('success', 'All Set', 'If the health check returns <code>"ok": true</c
 
 <p>To customize the plan limits, set the <code>PLAN_LIMITS_JSON</code> environment variable in your <code>wrangler.toml</code>:</p>
 ${codeBlock(`[vars]
-PLAN_LIMITS_JSON = '{"free":{"maxSessionsPerMonth":500,"maxMinutesPerMonth":3000,"maxBytesPerMonth":536870912,"maxFramesPerMonth":500000}}'`, 'toml', 'wrangler.toml')}
+PLAN_LIMITS_JSON = '{"free":{"monthly_session_starts":500,"monthly_ws_frames":500000}}'`, 'toml', 'wrangler.toml')}
+
+<p>Other plan settings: <code>DEFAULT_TENANT_PLAN</code> (the plan new users get, default <code>free</code>) and <code>TENANT_PLAN_OVERRIDES_JSON</code> (user id to plan). <code>ADMIN_API_KEYS</code> takes several admin keys, separated by commas or new lines.</p>
 
 <p>To set a specific user to the "pro" plan (or any custom plan), use the admin API:</p>
-${codeBlock(`curl -X POST https://your-broker.your-domain.com/admin/users/TELEGRAM_USER_ID/plan \\
+${codeBlock(`curl -X POST https://terminal.example.com/v1/admin/plan \\
   -H "Authorization: Bearer YOUR_ADMIN_API_KEY" \\
   -H "Content-Type: application/json" \\
-  -d '{"plan": "pro"}'`, 'bash')}
+  -d '{"user_id": "TELEGRAM_USER_ID", "plan": "pro"}'`, 'bash')}
 
 <p>Available plan limit keys:</p>
 ${configTable([
-  ['maxSessionsPerMonth', 'integer', '100', 'Maximum terminal sessions a user can start per month'],
-  ['maxMinutesPerMonth', 'integer', '600', 'Maximum active terminal minutes per month'],
-  ['maxBytesPerMonth', 'integer', '104857600', 'Maximum bytes transferred per month (default ~100 MB)'],
-  ['maxFramesPerMonth', 'integer', '100000', 'Maximum WebSocket frames per month'],
+  ['monthly_session_starts', 'integer', '350', 'Terminal sessions a user can start per month'],
+  ['monthly_session_minutes', 'integer', '2400', 'Active terminal minutes per month'],
+  ['monthly_client_bytes', 'integer', '536870912', 'Bytes from the Mini App per month (512 MiB)'],
+  ['monthly_daemon_bytes', 'integer', '1073741824', 'Bytes from the daemon per month (1 GiB)'],
+  ['monthly_ws_frames', 'integer', '300000', 'WebSocket frames per month'],
+  ['max_active_scoped_sessions', 'integer', '4', 'Sessions a user may have open at once'],
 ])}
 
 <h2>Troubleshooting</h2>
