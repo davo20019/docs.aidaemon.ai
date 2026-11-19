@@ -8,7 +8,7 @@ const pages = [
     title: 'AIDaemon Documentation — Personal AI Agent Daemon',
     description: 'Documentation for aidaemon, an open-source personal AI agent daemon. Chat via Telegram, Slack, or Discord. Extend with MCP, use any LLM.',
     content: () => `
-<h1><span class="ai">AI</span>Daemon</h1>
+<h1><span class="ai">AID</span>aemon</h1>
 <p class="lead">A personal AI agent that runs as a daemon. Always on, always learning. Chat from the AIDaemon app or Telegram, Slack and Discord, extend with MCP, powered by any LLM.</p>
 
 ${callout('success', 'New here?', 'Start with <a href="/getting-started/build">Install</a>: download the app for macOS, Windows or Linux and open it. Current version: <strong>0.21.0</strong>.')}
