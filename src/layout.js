@@ -104,12 +104,12 @@ export function layout(page, pages, lang, ui) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>${page.title}${sectionName ? ' — ' + sectionName : ''} | aidaemon docs</title>
+<title>${page.title}${sectionName ? ' — ' + sectionName : ''} | AIDaemon docs</title>
 <meta name="description" content="${page.description || 'Documentation for aidaemon — an open-source personal AI agent daemon.'}">
 <link rel="canonical" href="${canonical}">
 <meta name="robots" content="${isNotFound ? 'noindex, nofollow' : 'index, follow'}">
 ${renderHreflangTags(page.slug)}
-<meta property="og:title" content="${page.title}${sectionName ? ' — ' + sectionName : ''} | aidaemon docs">
+<meta property="og:title" content="${page.title}${sectionName ? ' — ' + sectionName : ''} | AIDaemon docs">
 <meta property="og:description" content="${page.description || 'Documentation for aidaemon — an open-source personal AI agent daemon.'}">
 <meta property="og:type" content="article">
 <meta property="og:url" content="${canonical}">
@@ -118,7 +118,7 @@ ${renderHreflangTags(page.slug)}
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="${page.title}${sectionName ? ' — ' + sectionName : ''} | aidaemon docs">
+<meta name="twitter:title" content="${page.title}${sectionName ? ' — ' + sectionName : ''} | AIDaemon docs">
 <meta name="twitter:description" content="${page.description || 'Documentation for aidaemon — an open-source personal AI agent daemon.'}">
 <meta name="twitter:image" content="https://aidaemon.ai/og-image.png">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👁</text></svg>">
