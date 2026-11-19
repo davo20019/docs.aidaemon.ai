@@ -1605,90 +1605,103 @@ ${callout('danger', 'Untrusted Sources', 'Sessions started by triggers (like ema
     slug: '/tools',
     section: 'Tools',
     title: 'Tools Overview',
-    description: 'Overview of all built-in tools the aidaemon LLM agent can call: terminal, memory, browser, web search, and more.',
+    description: 'Overview of the built-in tools the AIDaemon agent can call: terminal, files, memory, browser, web search, sub-agents, MCP and more.',
     content: () => `
 <h1>Tools</h1>
-<p class="lead">aidaemon provides a set of built-in tools the LLM can call autonomously during the agentic loop.</p>
+<p class="lead">AIDaemon provides a set of built-in tools the model can call on its own while it works on a request.</p>
 
 <h2>Tool Trait</h2>
 <p>All tools implement the same interface:</p>
 ${codeBlock(`trait Tool {
     fn name(&self) -> &str;
     fn description(&self) -> &str;
-    fn schema(&self) -> Value;       // OpenAI function-calling format
-    async fn call(&self, args: &str) -> Result<String>;
+    fn schema(&self) -> Value;   // full function object: name, description, parameters
+    async fn execute(&self, arguments: &str, facts: &ToolCallContext) -> Result<ToolCallOutcome>;
+    fn call_effects(&self, arguments: &str) -> CallEffects; // what a call does, judged by the approval hooks
 }`, 'rust')}
+<p>A tool never asks the owner itself. It declares what each call does (its effects), and the agent kernel&rsquo;s approval hooks decide whether to run it, ask you, or refuse.</p>
 
 <h2>Built-in Tools</h2>
 <table class="config-table">
 <thead><tr><th>Tool</th><th>Description</th><th>Config</th></tr></thead>
 <tbody>
-<tr><td><a href="/tools/terminal"><code>terminal</code></a></td><td>Execute shell commands with approval flow</td><td>[terminal]</td></tr>
+<tr><td><a href="/tools/terminal"><code>terminal</code></a></td><td>Execute shell commands with approval flow (see <a href="/tools/command-risk">command risk</a>)</td><td>[terminal]</td></tr>
 <tr><td><a href="/tools/system-info"><code>system_info</code></a></td><td>Query hostname, OS, uptime, memory</td><td>Always enabled</td></tr>
-<tr><td><a href="/tools/memory"><code>remember_fact</code></a></td><td>Store long-term facts in SQLite</td><td>Always enabled</td></tr>
-<tr><td><a href="/tools/config-manager"><code>manage_config</code></a></td><td>Read/update/restore config.toml</td><td>Always enabled</td></tr>
-<tr><td><a href="/tools/web-search"><code>web_search</code></a></td><td>Search the web (DuckDuckGo or Brave)</td><td>[search]</td></tr>
+<tr><td><code>read_file</code>, <code>write_file</code>, <code>edit_file</code>, <code>search_files</code></td><td>Read, write, edit and search files in the workspace</td><td>Always enabled</td></tr>
+<tr><td><code>check_environment</code></td><td>Check which programs and tools are installed</td><td>Always enabled</td></tr>
+<tr><td><a href="/tools/memory"><code>remember_fact</code></a></td><td>Store or forget facts about you (search them with <code>manage_memories</code>)</td><td>Always enabled</td></tr>
+<tr><td><a href="/tools/memory"><code>manage_memories</code></a></td><td>Search, list and forget stored facts, search past chats, track personal goals</td><td>Always enabled</td></tr>
+<tr><td><code>search_history</code></td><td>Search the exact messages of past conversations</td><td>Always enabled</td></tr>
+<tr><td><a href="/tools/config-manager"><code>manage_config</code></a></td><td>Read and change config.toml, switch providers, manage failover (secrets hidden)</td><td>Always enabled</td></tr>
+<tr><td><a href="/tools/web-search"><code>web_search</code></a></td><td>Search the web (DuckDuckGo, Brave or SearxNG, merged)</td><td>[search]</td></tr>
 <tr><td><a href="/tools/web-fetch"><code>web_fetch</code></a></td><td>Fetch and extract readable content from URLs</td><td>Always enabled</td></tr>
+<tr><td><code>http_request</code></td><td>Call REST/JSON APIs, with saved auth profiles</td><td>Always enabled</td></tr>
+<tr><td><code>manage_auth</code>, <code>manage_api</code></td><td>Connect services (API keys, OAuth) and learn their APIs</td><td>Always enabled</td></tr>
+<tr><td><code>set_reminder</code></td><td>Set a reminder</td><td>Always enabled</td></tr>
+<tr><td><a href="/scheduler"><code>schedule_task</code></a></td><td>Create a scheduled task</td><td>Always enabled</td></tr>
+<tr><td><a href="/scheduler"><code>manage_automations</code></a></td><td>List, change and run scheduled tasks and reminders</td><td>Always enabled</td></tr>
+<tr><td><code>manage_mandates</code></td><td>Standing goals the agent works on over time</td><td>Always enabled</td></tr>
+<tr><td><code>track_requirements</code></td><td>Keep a checklist of what a request asked for</td><td>Always enabled</td></tr>
 <tr><td><a href="/tools/browser"><code>browser</code></a></td><td>Chrome automation with persistent login sessions</td><td>[browser] enabled=true</td></tr>
-<tr><td><a href="/tools/send-file"><code>send_file</code></a></td><td>Send files to the user via Telegram or Slack</td><td>[files]</td></tr>
-<tr><td><a href="/tools/sub-agents"><code>spawn_agent</code></a></td><td>Spawn recursive sub-agents</td><td>[subagents]</td></tr>
-<tr><td><a href="/tools/cli-agents"><code>cli_agent</code></a></td><td>Delegate to external CLI tools</td><td>[cli_agents]</td></tr>
-<tr><td><a href="/scheduler"><code>scheduler</code></a></td><td>Create, manage, and run scheduled tasks</td><td>[scheduler]</td></tr>
-<tr><td><a href="/tools/command-risk"><code>command_risk</code></a></td><td>4-level risk assessment for terminal commands</td><td>[terminal]</td></tr>
+<tr><td><code>hand_over</code></td><td>Hand the browser to you (for example to sign in)</td><td>[browser] + [surfaces]</td></tr>
+<tr><td><code>computer_use</code></td><td>Control this computer&rsquo;s desktop from screenshots</td><td>[computer_use]</td></tr>
+<tr><td><a href="/tools/send-file"><code>send_file</code></a></td><td>Send a file to the user in the current chat (Telegram, Slack, Discord or the app)</td><td>[files] (on by default)</td></tr>
+<tr><td><code>generate_image</code></td><td>Generate an image</td><td>[files]</td></tr>
+<tr><td><a href="/tools/sub-agents"><code>spawn_agent</code></a></td><td>Delegate work to sub-agents and specialists</td><td>[subagents] (on by default)</td></tr>
+<tr><td><a href="/tools/cli-agents"><code>cli_agent</code></a></td><td>Delegate to installed coding agents (also <code>manage_cli_agents</code>)</td><td>[cli_agents] enabled = true</td></tr>
 <tr><td><a href="/health-monitoring"><code>health_probe</code></a></td><td>Manage and run health probes</td><td>[health]</td></tr>
-<tr><td><a href="/skills"><code>manage_skills</code></a></td><td>Add, remove, browse, install dynamic skills</td><td>[skills]</td></tr>
+<tr><td><a href="/skills"><code>use_skill</code>, <code>skill_resources</code>, <code>manage_skills</code></a></td><td>Use, browse and install skills</td><td>[skills]</td></tr>
 <tr><td><a href="/tools/people"><code>manage_people</code></a></td><td>Personal contact book with birthdays, preferences, relationships</td><td>Always registered</td></tr>
+<tr><td><a href="/mcp"><code>manage_mcp</code></a></td><td>Add, remove and restart MCP servers at runtime</td><td>Always enabled</td></tr>
 <tr><td><a href="/mcp">MCP tools</a></td><td>Dynamically discovered via MCP servers</td><td>[mcp.*]</td></tr>
 </tbody>
 </table>
 
-${callout('info', 'Dynamic Budget', 'The agent also has a built-in <code>request_more_iterations</code> pseudo-tool that extends the agentic loop budget by 10 iterations (up to a hard cap) when the current budget is insufficient to complete a task.')}
+<p>Fifteen core tools are offered on every call (terminal, memory, reminders and scheduling, history search, web, files, <code>spawn_agent</code>, <code>track_requirements</code>). The rest are offered when a request needs them. Work is bounded by progress and token budgets, not by a fixed number of steps.</p>
 
-<h2>Tool Registration Order</h2>
-<p>Tools are registered during initialization in this order:</p>
-<ol>
-  <li>SystemInfoTool</li>
-  <li>TerminalTool (with approval channel)</li>
-  <li>RememberFactTool</li>
-  <li>ConfigManagerTool</li>
-  <li>WebFetchTool</li>
-  <li>WebSearchTool</li>
-  <li>BrowserTool (if enabled)</li>
-  <li>SendFileTool (if files.enabled)</li>
-  <li>CliAgentTool (if enabled)</li>
-  <li>SchedulerTool (if scheduler.enabled)</li>
-  <li>HealthProbeTool (if health.enabled)</li>
-  <li>ManageSkillsTool</li>
-  <li>ManagePeopleTool (always registered, gated internally)</li>
-  <li>MCP tools (if configured)</li>
-</ol>
+<h2>Which Tools Are Registered</h2>
+<p>Tools are registered at startup in three groups:</p>
+<ul>
+  <li><strong>Always registered</strong> (unless listed in <code>[tools] disabled</code>): system_info, terminal, remember_fact, manage_memories, set_reminder, schedule_task, manage_mandates, manage_automations, search_history, manage_config, web_fetch, web_search, read_file, write_file, edit_file, search_files, check_environment, manage_mcp, manage_people, http_request, manage_auth, manage_api.</li>
+  <li><strong>Registered when enabled</strong>: spawn_agent ([subagents]); browser, and hand_over with [surfaces] ([browser]); computer_use ([computer_use]); send_file and generate_image ([files]); cli_agent and manage_cli_agents ([cli_agents]); health_probe ([health]); use_skill, skill_resources and manage_skills ([skills]); self_diagnose, goal_trace and policy_metrics ([diagnostics]); node tools ([nodes]); client_view and request_feature ([client_gateway]); read_channel_history (Slack, opt-in).</li>
+  <li><strong>MCP tools</strong> from configured servers.</li>
+</ul>
+${codeBlock(`[tools]
+disabled = ["generate_image"]   # leave a built-in tool out at startup (needs /restart)`, 'toml', 'config.toml')}
 `
   },
   {
     slug: '/tools/terminal',
     section: 'Tools',
     title: 'Terminal Tool',
-    description: 'Execute shell commands on the host system via aidaemon. Commands run through sh -c with risk assessment.',
+    description: 'Execute shell commands on the host, a Docker container or an SSH host via AIDaemon, with owner approvals for anything risky.',
     content: () => `
 <h1>Terminal Tool</h1>
-<p class="lead">Execute shell commands on the host system. Commands are run via <code>sh -c</code>.</p>
+<p class="lead">Execute shell commands. Commands run with <code>sh -c</code> (Windows PowerShell on Windows), in the configured workspace: this computer, a Docker container or an SSH host.</p>
 
 <h2>Parameters</h2>
 ${configTable([
-  ['command', 'string', '—', 'The shell command to execute (required for action="run")'],
-  ['action', 'string', '"run"', 'One of: run, check, kill, trust_all'],
+  ['action', 'string', '—', 'One of: run, check, kill (required)'],
+  ['command', 'string', '—', 'The shell command to execute (for action="run")'],
+  ['script', 'string', '—', 'A multi-step shell script, run with /bin/sh -eu so a failed step stops the rest. Use instead of command.'],
+  ['working_dir', 'string', '—', 'Directory the command runs in'],
+  ['background', 'bool', 'false', 'Run finite work in the background; the result is sent to you when it finishes'],
+  ['detach', 'bool', 'false', 'Start a long-lived process (server, watcher) that keeps running until killed'],
+  ['network', 'bool', 'false', 'Allow network for a confined (sandboxed) run; asks first unless already granted'],
+  ['read_paths / read_roots / write_paths / write_roots', 'array', '—', 'Extra paths a confined run may read or write; paths outside the task scope ask first'],
+  ['description', 'string', '—', 'A few words shown to you while it runs'],
   ['pid', 'integer', '—', 'Process ID required for check/kill'],
 ])}
+<p>Trust-all mode is the owner&rsquo;s <code>/trustall</code> command, never a tool action.</p>
 
 <h2>Approval Logic</h2>
-<p>A command is auto-approved only if <strong>both</strong> conditions are met:</p>
+<p>A command runs without asking when one of these is true:</p>
 <ol>
-  <li>The command starts with a prefix in <code>terminal.allowed_prefixes</code></li>
-  <li>The command does <strong>not</strong> contain any shell operators</li>
+  <li>Its program is in <code>terminal.allowed_prefixes</code> or was allowed earlier. For a chain (<code>&amp;&amp;</code>, <code>||</code>, <code>;</code>, <code>|</code>) every segment&rsquo;s program must be allowed.</li>
+  <li>It is a build, lint or read-only git command on the confined list; it then runs in the sandbox.</li>
+  <li>The model&rsquo;s safety check of the full command finds nothing that needs you.</li>
 </ol>
-
-<h3>Shell Operators (always require approval)</h3>
-${codeBlock(`; | && || $() \` (backticks)`, 'text')}
+<p>An allowed program does not cover a command that writes a file by redirection, starts with a variable assignment, or launches another program (<code>env sh -c</code>, <code>xargs</code>, <code>find -exec</code>). A command that touches a credential path always asks. If the safety check is unavailable, the command asks (fails closed). See <a href="/tools/command-risk">Command Risk Assessment</a>.</p>
 
 <h3>Default Allowed Prefixes</h3>
 ${codeBlock(`ls, cat, head, tail, echo, date, whoami, pwd, find, wc,
@@ -1697,30 +1710,33 @@ grep, tree, file, stat, uname, df, du, ps, which, env, printenv`, 'text')}
 <h2>Output</h2>
 <p>Returns stdout first, then stderr (if any). Output is truncated to <code>terminal.max_output_chars</code> (default 4000 characters).</p>
 
-<h2>Background Commands (New)</h2>
+<h2>Background Commands</h2>
 <p>If a command exceeds the initial timeout, it moves to the background and returns a PID.</p>
 <ul>
   <li><code>action="check"</code> + <code>pid</code> shows partial/final output</li>
   <li><code>action="kill"</code> + <code>pid</code> stops a running background command</li>
   <li>Recent completed output is retained briefly so follow-up checks still work</li>
+  <li>Daemonizing commands (<code>nohup</code>, <code>setsid</code>, <code>&amp; disown</code>&hellip;) need <code>detach=true</code> and an owner&rsquo;s approval</li>
 </ul>
 
-<h2>Hard Safety Blocks (New)</h2>
-<p>Certain destructive patterns are now blocked before approval flow, including broad/sensitive <code>rm -rf</code> and <code>find ... -delete</code> targets.</p>
+<h2>Hard Blocks</h2>
+<p>Some commands are refused before any approval and cannot be allowed: recursive <code>rm</code>/<code>chmod</code>/<code>chown</code> of the root, home or system directories, <code>mkfs</code>, <code>dd</code>/<code>shred</code>/<code>wipefs</code> on a raw device, and recursive deletes (<code>rm -r</code>, <code>find -delete</code>) of anything outside the workspace.</p>
 
 <h2>Configuration</h2>
 ${codeBlock(`[terminal]
 allowed_prefixes = ["ls", "cat", "head", "tail", "echo", "date"]
 initial_timeout_secs = 30
 max_output_chars = 4000
-permission_mode = "default"`, 'toml', 'config.toml')}
+permission_mode = "default"
+confinement = "host"   # or "sandbox"`, 'toml', 'config.toml')}
+<p><code>confinement = "host"</code> (default) runs commands on this machine with your environment and credentials. <code>"sandbox"</code> runs every command in the OS sandbox (seatbelt on macOS, bubblewrap or the Codex sandbox on Linux), with no network and only the task&rsquo;s files unless granted.</p>
 
 <h2>Allow Always (Persistent)</h2>
-<p>When the user clicks "Allow Always" in Telegram:</p>
+<p>Approval cards offer Allow Once, Allow Session (until restart) or Allow Always, and Deny, in any channel or the app. Cautious mode, and Critical commands in default mode, offer Allow Session instead of Allow Always. When you choose "Allow Always":</p>
 <ol>
-  <li>The first word of the command is extracted as the prefix</li>
+  <li>The command&rsquo;s program (its first word, or every segment&rsquo;s program for a chained command) becomes the allowed prefix</li>
   <li>The prefix is added to the in-memory allowed list</li>
-  <li>The prefix is persisted to SQLite (<code>terminal_allowed_prefixes</code> table)</li>
+  <li>The prefix is saved in the database for the current workspace (<code>terminal_backend_allowed_prefixes</code>), so each execution target keeps its own approvals</li>
   <li>On restart, persisted prefixes are merged with config prefixes</li>
 </ol>
 <p>This means "Allow Always" approvals survive daemon restarts without modifying config.toml.</p>
@@ -1732,51 +1748,46 @@ ${callout('danger', 'Untrusted Sessions', 'Sessions from triggers (email, etc.) 
     slug: '/tools/command-risk',
     section: 'Tools',
     title: 'Command Risk Assessment',
-    description: 'Every terminal command is scored with a 4-level risk system: Safe, Medium, High, and Critical. 60+ patterns.',
+    description: 'How AIDaemon decides when a terminal command needs your approval, and how risky the card says it is.',
     content: () => `
 <h1>Command Risk Assessment</h1>
-<p class="lead">Every terminal command is scored with a 4-level risk system before execution.</p>
+<p class="lead">A command you have not already allowed is checked by the model, which classifies what the whole command actually does (reads, local edits, network, deploys, deletes, secrets&hellip;). Commands that need you get an approval card rated Safe, Medium, High or Critical.</p>
 
 <h2>Risk Levels</h2>
 <table class="config-table">
-<thead><tr><th>Level</th><th>Auto-Approved?</th><th>Examples</th></tr></thead>
+<thead><tr><th>Level</th><th>Card shows</th></tr></thead>
 <tbody>
-<tr><td><strong>Safe</strong></td><td>Yes (if prefix whitelisted)</td><td><code>ls</code>, <code>cat</code>, <code>date</code>, <code>echo</code></td></tr>
-<tr><td><strong>Medium</strong></td><td>After first approval</td><td><code>curl</code>, <code>git push</code>, <code>npm install</code></td></tr>
-<tr><td><strong>High</strong></td><td>After first approval</td><td><code>rm</code>, <code>mv</code>, <code>chmod</code>, <code>kill</code></td></tr>
-<tr><td><strong>Critical</strong></td><td>Never persisted (default)</td><td><code>sudo rm -rf</code>, <code>dd</code>, <code>mkfs</code></td></tr>
+<tr><td><strong>Safe</strong></td><td>New command</td></tr>
+<tr><td><strong>Medium</strong></td><td>Approval needed</td></tr>
+<tr><td><strong>High</strong></td><td>Review carefully</td></tr>
+<tr><td><strong>Critical</strong></td><td>Dangerous action. Also used for daemonizing commands and whenever the safety check is unavailable.</td></tr>
 </tbody>
 </table>
+<p>The level comes from the safety check, not a fixed list. Deploys, pushes, sends, deletes, system changes, privilege escalation, running downloaded code and anything it cannot determine need approval. Builds, tests and edits inside the workspace, and read-only network access, do not.</p>
 
 <h2>Permission Modes</h2>
 ${configTable([
-  ['default', '—', '—', 'Safe/Medium/High approvals persist across restarts. Critical is per-session only.'],
+  ['default', '—', '—', 'Cards offer Allow Always, except Critical ones, which offer Allow Session (until restart).'],
   ['cautious', '—', '—', 'All approvals are per-session only.'],
-  ['yolo', '—', '—', 'All approvals persist forever.'],
+  ['yolo', '—', '—', 'Every command runs without asking (credential paths and untrusted sessions still ask), and every approval persists, including Critical.'],
 ])}
 
-<h2>Dangerous Constructs</h2>
-<p>Patterns that always elevate risk:</p>
-<ul>
-  <li>Command substitution: <code>$(...)</code> and backticks</li>
-  <li>Process substitution: <code>&gt;(...)</code>, <code>&lt;(...)</code></li>
-  <li>Redirection: <code>&gt;</code>, <code>&gt;&gt;</code></li>
-  <li>Multiple commands: <code>;</code>, <code>&amp;&amp;</code>, <code>||</code></li>
-  <li>Pipes into shells or <code>sudo</code></li>
-</ul>
+<h2>What an allowed program does not cover</h2>
+<p>Allowing a program covers running that program, not more. A chain needs every segment&rsquo;s program allowed. Redirecting into a file, a leading variable assignment, or launching another program through it (<code>env</code>, <code>xargs</code>, <code>find -exec</code>/<code>-delete</code>, <code>sh -c</code>) is judged like any new command.</p>
 
 <h2>Sensitive Path Detection</h2>
-<p>Commands referencing these files are automatically elevated:</p>
+<p>Commands referencing these paths always ask, even when the program is allowed:</p>
 <ul>
-  <li><code>.env</code> &mdash; environment secrets</li>
-  <li>SSH keys: <code>id_rsa</code>, <code>id_ed25519</code></li>
-  <li>Cloud configs: <code>.aws</code>, <code>.kube</code>, <code>.docker</code></li>
-  <li>System auth: <code>shadow</code>, <code>passwd</code>, <code>sudoers</code></li>
-  <li>Credentials: <code>master.key</code>, <code>.netrc</code>, <code>.pgpass</code></li>
+  <li><code>.ssh</code>, <code>.env</code> (not <code>.env.example</code>), SSH keys <code>id_rsa</code>, <code>id_ed25519</code>, <code>id_dsa</code>, <code>id_ecdsa</code></li>
+  <li>System auth: <code>shadow</code>, <code>sudoers</code></li>
+  <li>Credentials: <code>credentials</code> (e.g. <code>.aws/credentials</code>), <code>secrets</code>, <code>master.key</code>, <code>.netrc</code>, <code>.pgpass</code>, <code>.npmrc</code>, <code>.pypirc</code></li>
 </ul>
 
-<h2>Hard Blocks (New)</h2>
-<p>Even before approval flow, broad or sensitive delete patterns are blocked, including risky <code>rm -rf</code> and <code>find ... -delete</code> targets.</p>
+<h2>Hard Blocks</h2>
+<p>Some commands are refused before any approval and cannot be allowed: recursive <code>rm</code>/<code>chmod</code>/<code>chown</code> of the root, home or system directories, <code>mkfs</code>, <code>dd</code>/<code>shred</code>/<code>wipefs</code> on a raw device, and recursive deletes (<code>rm -r</code>, <code>find -delete</code>) of anything outside the workspace.</p>
+
+<h2>Approvals are kernel hooks</h2>
+<p>The terminal never prompts on its own. Each call declares its effects; the agent kernel&rsquo;s approval policy (hard blocks, then the terminal&rsquo;s rules, then your grants) decides whether to run it, ask you, or refuse. A denial also blocks other calls in the same run that would do the same thing.</p>
 
 ${callout('info', 'Configuration', 'Set <code>terminal.permission_mode</code> in config.toml. Default is <code>"default"</code>.')}
 `
@@ -1785,10 +1796,10 @@ ${callout('info', 'Configuration', 'Set <code>terminal.permission_mode</code> in
     slug: '/tools/system-info',
     section: 'Tools',
     title: 'System Info Tool',
-    description: 'Query OS, hostname, architecture, CPU, memory, disk, uptime, and process info via the system info tool.',
+    description: 'Query OS, hostname, uptime and memory of the configured execution environment via the system info tool.',
     content: () => `
 <h1>System Info Tool</h1>
-<p class="lead">Query basic system information. Always enabled, no parameters.</p>
+<p class="lead">Query basic information about the configured execution environment (this machine, a Docker container or an SSH host). Always enabled, no parameters.</p>
 
 <h2>Parameters</h2>
 <p>None — this tool takes no arguments.</p>
@@ -1813,10 +1824,10 @@ ${callout('info', 'Configuration', 'Set <code>terminal.permission_mode</code> in
     slug: '/tools/memory',
     section: 'Tools',
     title: 'Memory / Facts Tool',
-    description: 'Store and retrieve long-term facts that persist across sessions and are injected into the system prompt.',
+    description: 'Store, search and forget long-term facts that persist across sessions; the most relevant ones are recalled each turn.',
     content: () => `
 <h1>Memory / Facts Tool</h1>
-<p class="lead">Store and retrieve long-term facts that persist across sessions and are injected into the system prompt.</p>
+<p class="lead">Store and retrieve long-term facts that persist across sessions. The facts relevant to each message are recalled into the prompt.</p>
 
 <h2>Tool Name</h2>
 <p><code>remember_fact</code></p>
@@ -1826,31 +1837,35 @@ ${configTable([
   ['category', 'string', '—', 'Grouping category (e.g., "user", "preference", "project")'],
   ['key', 'string', '—', 'Unique identifier within the category'],
   ['value', 'string', '—', 'The fact content to store'],
+  ['delete', 'bool', 'false', 'Forget category/key instead of storing'],
+  ['evidence', 'string', '—', 'Your own words stating the fact, quoted'],
+  ['scope', 'string', 'project', 'In a project conversation: project keeps it in the project notes, personal keeps it for you'],
+  ['facts', 'array', '—', 'Several facts in one call, each with the same fields'],
 ])}
 
 <h2>Storage</h2>
-<p>Facts are upserted into the <code>facts</code> table in SQLite. The <code>(category, key)</code> pair is unique — storing a fact with the same category and key overwrites the previous value.</p>
+<p>Facts are stored in the <code>facts</code> table in SQLite. Storing a new value for the same category and key replaces it. The old value is kept as superseded history, and near-duplicate keys (for example <code>editor</code> and <code>preferred_editor</code>) are merged.</p>
 
-<h2>System Prompt Injection</h2>
-<p>Up to <code>state.max_facts</code> (default 100) facts are injected into the system prompt under a <code>## Known Facts</code> section, grouped by category and ordered by most recently updated. This means the agent always has access to its stored knowledge.</p>
+<h2>Recall</h2>
+<p>Facts are not all injected. Each turn, the facts most relevant to your message (at most 8, and never more than <code>state.max_facts</code>, default 20) appear under <code>## Relevant Memory</code>, each with the date it was recorded. Your name and the agent&rsquo;s identity are pinned separately. The agent looks up anything else with <code>manage_memories</code>.</p>
 
-${codeBlock(`## Known Facts
+${codeBlock(`## Relevant Memory
+- Fact [12] (recorded 2026-10-02) user/timezone = US/Pacific
+- Fact [31] (recorded 2026-09-14) project/language = Rust`, 'text', 'system prompt')}
 
-### user
-- name: David
-- timezone: US/Pacific
-
-### project
-- language: Rust
-- repo: /home/david/projects/myapp`, 'text', 'system prompt injection')}
+<h2>Finding and managing memories</h2>
+<p><code>manage_memories</code> searches stored facts (<code>search</code>), lists them, searches summaries of past chats (<code>search_episodes</code>), forgets one fact, sets who may see one (<code>set_privacy</code>: global, channel or private), and tracks personal goals. For the exact messages of past chats, use <code>search_history</code>.</p>
 
 <h2>Facts Table Schema</h2>
 ${configTable([
   ['id', 'integer', 'auto', 'Auto-incrementing primary key'],
   ['category', 'string', '—', 'Grouping category'],
-  ['key', 'string', '—', 'Fact key (unique per category)'],
+  ['key', 'string', '—', 'Fact key (unique per category among current facts)'],
   ['value', 'string', '—', 'Fact content'],
-  ['source', 'string', '""', 'Who stored it: "agent" or "user"'],
+  ['source', 'string', '""', 'Who stored it, e.g. "agent"'],
+  ['privacy', 'string', 'global', 'Who may see it: global, channel or private'],
+  ['channel_id', 'string', '—', 'Channel it was learned in'],
+  ['superseded_at', 'timestamp', '—', 'Set when a newer value replaced it'],
   ['created_at', 'timestamp', 'now', 'When the fact was created'],
   ['updated_at', 'timestamp', 'now', 'When the fact was last updated'],
 ])}
@@ -1860,7 +1875,7 @@ ${configTable([
     slug: '/tools/config-manager',
     section: 'Tools',
     title: 'Config Manager Tool',
-    description: 'The aidaemon agent can read, update, validate, and restore its own configuration file autonomously.',
+    description: 'The AIDaemon agent can read, update, validate, and restore its own configuration file, and switch providers.',
     content: () => `
 <h1>Config Manager Tool</h1>
 <p class="lead">The agent can read, update, validate, and restore its own configuration file.</p>
@@ -1879,7 +1894,7 @@ password = "***REDACTED***"`, 'toml')}
 <h3>get</h3>
 <p>Read a specific TOML key path:</p>
 ${codeBlock(`action: "get"
-key: "provider.models.primary"
+key: "provider.models.default"
 # Returns: "gemini-3-flash-preview"`, 'text')}
 
 <h3>set</h3>
@@ -1895,12 +1910,23 @@ value: "100"`, 'text')}
   <li>Sets file permissions to 0600 (owner-only) on Unix</li>
 </ol>
 
+<h3>unset</h3>
+<p>Remove a key.</p>
+
 <h3>restore</h3>
-<p>Rollback to the most recent backup file.</p>
+<p>Roll back to the newest backup (<code>.bak</code>, then <code>.bak.1</code>, <code>.bak.2</code>). Run <code>/reload</code> to apply.</p>
 
-${callout('info', 'Last Known Good', 'After every successful LLM call, the current config is stamped as <code>.toml.lastgood</code>. This is the first file tried during recovery.')}
+<h3>Provider actions</h3>
+<p><code>list_provider_presets</code> and <code>switch_provider</code> change the model provider; <code>list_failover_providers</code>, <code>add_failover_provider</code>, <code>remove_failover_provider</code> and <code>move_failover_provider</code> manage failover.</p>
 
-<h2>Backup Priority</h2>
+<h3>Setup actions</h3>
+<p><code>enable_stt</code>, <code>enable_client_gateway</code>, <code>enable_exposure</code>.</p>
+
+${callout('warn', 'Secrets', 'API keys and tokens are never tool arguments. Store one yourself with <code>aidaemon keychain set &lt;key&gt;</code>; the setting then holds the value <code>keychain</code>.')}
+
+${callout('info', 'Last Known Good', 'After every successful LLM call, the current config is stamped as <code>.toml.lastgood</code>. This is the first file tried when the config fails to load at startup.')}
+
+<h2>Startup Recovery Order</h2>
 <ol>
   <li><code>config.toml.lastgood</code> — proven working config</li>
   <li><code>config.toml.bak</code> — most recent backup</li>
@@ -1913,12 +1939,12 @@ ${callout('info', 'Last Known Good', 'After every successful LLM call, the curre
     slug: '/tools/browser',
     section: 'Tools',
     title: 'Browser Tool',
-    description: 'Chrome automation with persistent login sessions for web browsing, form filling, and screenshots.',
+    description: 'Chrome automation with persistent login sessions for web browsing, form filling, screenshots and PDFs.',
     content: () => `
 <h1>Browser Tool</h1>
 <p class="lead">Chrome automation with persistent login sessions. Log in once, and the agent can browse authenticated sites on your behalf.</p>
 
-${callout('success', 'Pre-built Binaries', 'If you installed via the one-line script or Homebrew, the browser tool is already included. Just enable it in <code>config.toml</code> below. The feature flag is only needed when <a href="/getting-started/build">building from source</a>.')}
+${callout('success', 'Pre-built Binaries', 'If you installed via the one-line script or Homebrew, the browser tool is already included. Just enable it in <code>config.toml</code> below. It is also part of the default source build.')}
 
 <h2>Quick Start</h2>
 <p>Two steps to get the agent browsing with your login sessions:</p>
@@ -1943,6 +1969,11 @@ ${configTable([
   ['screenshot_height', 'int', '720', 'Browser viewport height in pixels'],
   ['user_data_dir', 'string', '~/.aidaemon/chrome-profile', 'Chrome profile directory for persistent sessions'],
   ['profile', 'string', 'Default', 'Chrome profile name within user_data_dir'],
+  ['keep_sign_ins', 'bool', 'true', 'Keep sign-ins in ~/.aidaemon/chrome-profile; off = a fresh profile each time'],
+  ['session_isolation', 'string', 'auto', 'How sessions are isolated: browser_context or page'],
+  ['nav_timeout_secs', 'int', '30', 'Page-load wait'],
+  ['element_timeout_secs', 'int', '10', 'Default wait for the wait action'],
+  ['action_timeout_secs', 'int', '30', 'Per-action ceiling'],
   ['remote_debugging_port', 'int', 'null', 'Connect to an existing Chrome instance on this port (advanced)'],
 ])}
 
@@ -1956,23 +1987,32 @@ enabled = true`, 'toml', 'config.toml')}
 <table class="config-table">
 <thead><tr><th>Action</th><th>Parameters</th><th>Description</th></tr></thead>
 <tbody>
-<tr><td><code>navigate</code></td><td><code>url</code></td><td>Navigate to URL, wait 2s for page load</td></tr>
-<tr><td><code>screenshot</code></td><td><code>selector?</code></td><td>PNG screenshot of full page or specific element</td></tr>
+<tr><td><code>navigate</code></td><td><code>url</code></td><td>Open a URL and wait for the page to load (up to <code>nav_timeout_secs</code>, default 30s)</td></tr>
+<tr><td><code>screenshot</code></td><td><code>selector?, full_page?, deliver?</code></td><td>PNG of the visible viewport, an element, or the full page</td></tr>
+<tr><td><code>render_pdf</code></td><td><code>source_path, output_filename?</code></td><td>Render a local HTML file to PDF</td></tr>
 <tr><td><code>click</code></td><td><code>selector</code></td><td>Click an element by CSS selector</td></tr>
 <tr><td><code>fill</code></td><td><code>selector, value</code></td><td>Type text into a form input</td></tr>
 <tr><td><code>get_text</code></td><td><code>selector?</code></td><td>Extract text content from element or full page</td></tr>
-<tr><td><code>execute_js</code></td><td><code>script</code></td><td>Run arbitrary JavaScript and return the result</td></tr>
-<tr><td><code>wait</code></td><td><code>selector, timeout_secs?</code></td><td>Wait for an element to appear (default 10s timeout)</td></tr>
+<tr><td><code>inspect_page</code></td><td>—</td><td>Describe the page&rsquo;s structure and interactive elements</td></tr>
+<tr><td><code>scroll</code></td><td><code>direction?, amount?</code></td><td>Scroll up or down (default 700 px)</td></tr>
+<tr><td><code>execute_js</code></td><td><code>script</code></td><td>Run JavaScript and return the result (always asks first)</td></tr>
+<tr><td><code>wait</code></td><td><code>selector, condition?, text?, timeout_secs?</code></td><td>Wait until an element is present, visible, enabled, hidden or contains text (default <code>element_timeout_secs</code>, 10s)</td></tr>
+<tr><td><code>list_tabs</code>, <code>new_tab</code>, <code>switch_tab</code>, <code>close_tab</code></td><td><code>url?</code> / <code>tab_id</code></td><td>Work with several tabs</td></tr>
+<tr><td><code>get_console_logs</code>, <code>get_network_errors</code></td><td><code>tab_id?</code></td><td>Read the page&rsquo;s console and failed requests</td></tr>
+<tr><td><code>set_mode</code></td><td><code>value</code></td><td>Switch between visible and headless</td></tr>
 <tr><td><code>close</code></td><td>—</td><td>Close the browser session</td></tr>
 </tbody>
 </table>
+
+<h2>Approvals</h2>
+<p>Public navigation and reading pages need no approval. Opening a site on this computer asks once per site, page changes may ask, and <code>execute_js</code> always asks.</p>
 
 <h2>Session Persistence</h2>
 <p>The browser tool uses a dedicated Chrome profile at <code>~/.aidaemon/chrome-profile/</code> that stores cookies, local storage, and login sessions. This means:</p>
 <ul>
   <li>Log in once via <code>aidaemon browser login</code>, sessions persist indefinitely</li>
   <li>The agent launches Chrome headless with this profile — already authenticated</li>
-  <li>Sessions survive aidaemon restarts and system reboots</li>
+  <li>Sessions survive AIDaemon restarts and system reboots</li>
   <li>Re-run <code>aidaemon browser login</code> anytime to add new services or refresh expired sessions</li>
 </ul>
 
@@ -1981,7 +2021,7 @@ ${callout('warn', 'Isolated from Personal Chrome', 'The agent uses its own Chrom
 <h2>Deployment Modes</h2>
 
 <h3>Isolated instance (recommended)</h3>
-<p>When running aidaemon on a dedicated server or VM, no other Chrome is running. The agent launches and owns Chrome directly.</p>
+<p>When running AIDaemon on a dedicated server or VM, no other Chrome is running. The agent launches and owns Chrome directly.</p>
 ${codeBlock(`# SSH into your instance
 ssh user@my-server
 
@@ -1996,12 +2036,12 @@ aidaemon browser login
 <p>For headless servers, use SSH with X forwarding (<code>ssh -X</code>) or VNC for the initial login.</p>
 
 <h3>Personal computer</h3>
-<p>When running aidaemon alongside your personal Chrome, the agent launches a separate Chrome instance with its own profile. Both run side by side without conflict.</p>
+<p>When running AIDaemon alongside your personal Chrome, the agent launches a separate Chrome instance with its own profile. Both run side by side without conflict.</p>
 ${codeBlock(`# Same setup — separate Chrome instance, no conflict
 aidaemon browser login
 
 # Your personal Chrome (47 tabs, extensions, bookmarks) → untouched
-# Aidaemon's Chrome (~/.aidaemon/chrome-profile/) → isolated`, 'bash')}
+# AIDaemon's Chrome (~/.aidaemon/chrome-profile/) → isolated`, 'bash')}
 
 <h3>Advanced: Connect to existing Chrome</h3>
 <p>For power users who want to connect to a Chrome instance already running with a remote debugging port:</p>
@@ -2011,7 +2051,10 @@ remote_debugging_port = 9222`, 'toml', 'config.toml')}
 <p>Start Chrome with <code>--remote-debugging-port=9222</code> and the agent connects to it directly. This shares the Chrome instance's sessions but requires Chrome to be launched with the debugging flag.</p>
 
 <h2>Screenshots</h2>
-<p>Screenshots are captured as PNG and sent to the user via the active channel (Telegram photo, Slack file upload, etc.) with captions describing the page URL.</p>
+<p>Screenshots are saved for the agent to look at. One is sent to you when the agent marks it as the deliverable you asked for (<code>deliver: true</code>).</p>
+
+<h2>Watching and Taking Over</h2>
+<p>With <code>[surfaces]</code> on (default), you can watch and take over the agent&rsquo;s browser from a paired app, and the agent can hand it to you to sign in (<code>hand_over</code>).</p>
 
 <h2>Use Cases</h2>
 <ul>
@@ -2023,8 +2066,7 @@ remote_debugging_port = 9222`, 'toml', 'config.toml')}
 </ul>
 
 <h2>Building from Source</h2>
-<p>The browser tool requires the <code>browser</code> feature flag:</p>
-${codeBlock(`cargo build --release --features browser`, 'bash')}
+<p>The <code>browser</code> feature is on by default, so a plain <code>cargo build --release</code> includes it. Builds with <code>--no-default-features</code> must add <code>--features browser</code>.</p>
 <p>Requires a Chromium-based browser installed (Chrome, Chromium, Brave, or Edge).</p>
 `
   },
@@ -2032,41 +2074,55 @@ ${codeBlock(`cargo build --release --features browser`, 'bash')}
     slug: '/tools/sub-agents',
     section: 'Tools',
     title: 'Sub-Agent Spawning',
-    description: 'Spawn child agents for complex tasks with recursive delegation. Each sub-agent gets its own tool set.',
+    description: 'Delegate focused work to sub-agents and named specialists, alone or several in parallel.',
     content: () => `
 <h1>Sub-Agent Spawning</h1>
-<p class="lead">The agent can spawn child agents for complex tasks, enabling recursive delegation.</p>
+<p class="lead">The agent can delegate focused work to fresh sub-agents and named specialists, one at a time or several in parallel.</p>
 
 <h2>Tool Name</h2>
 <p><code>spawn_agent</code></p>
 
 <h2>Parameters</h2>
 ${configTable([
-  ['mission', 'string', '—', 'High-level role/context for the sub-agent'],
-  ['task', 'string', '—', 'Concrete question or work to accomplish'],
+  ['task', 'string', '—', 'What the sub-agent should do'],
+  ['mission', 'string', 'title', 'Optional wider goal for its context'],
+  ['title', 'string', '—', 'A few words shown on its card'],
+  ['specialist', 'string', 'executor', 'code, research, review, browser_verifier, artifact_writer, comms_draft, executor or generic'],
+  ['tasks', 'array', '—', 'Several sub-agents in one call (up to 6, 3 at a time)'],
+  ['background', 'bool', 'false', 'Run in the background; the result goes to your chat'],
+  ['tools', 'array', '—', 'Limit which tools it may use'],
+  ['access', 'string', '—', 'read_only to only observe'],
+  ['scope', 'array', '—', 'Files or folders it may change'],
+  ['model_tier', 'string', 'same', 'fast, primary or smart'],
 ])}
 
 <h2>Behavior</h2>
 <ul>
   <li>Child agent runs at <code>parent_depth + 1</code></li>
-  <li>Inherits parent's provider, state store, model, and non-spawn tools</li>
+  <li>Inherits the parent&rsquo;s tools and access (never more), and its model unless <code>model_tier</code> is set</li>
   <li>Gets a focused system prompt: base instructions + mission context</li>
-  <li>Runs a complete agentic loop in an isolated session (<code>sub-{depth}-{uuid}</code>)</li>
+  <li>Runs a complete agentic loop in an isolated session</li>
   <li>Returns final text response to parent (truncated to <code>max_response_chars</code>)</li>
-  <li>If <code>child_depth &lt; max_depth</code>, child also gets the <code>spawn_agent</code> tool</li>
+  <li>If <code>child_depth &lt; max_depth</code>, child also gets the <code>spawn_agent</code> tool; a named specialist delegates further only if its tools include <code>spawn_agent</code></li>
 </ul>
+
+<h2>Specialists</h2>
+<p>A sub-agent can run as a named specialist with its own instructions and tools. Override one by placing <code>&lt;kind&gt;.md</code> in <code>~/.aidaemon/specialists/</code>.</p>
 
 <h2>Configuration</h2>
 ${codeBlock(`[subagents]
 enabled = true
 max_depth = 3
-max_iterations = 10
 max_response_chars = 8000
-timeout_secs = 300`, 'toml', 'config.toml')}
+timeout_secs = 300        # stopped after this long with no progress
+max_concurrent = 4
+max_per_request = 12
+task_token_budget = 500000`, 'toml', 'config.toml')}
+<p><code>max_iterations</code> is a legacy key. There is no step limit by default.</p>
 
 ${callout('info', 'Recursion Limit', 'Sub-agents can spawn their own sub-agents up to <code>max_depth</code> levels deep. At max depth, the spawn_agent tool is not provided.')}
 
-${callout('warn', 'Timeout', 'Each sub-agent invocation has a hard timeout (<code>timeout_secs</code>). If a sub-agent takes too long, the parent receives a timeout error.')}
+${callout('info', 'No wall-clock limit', 'A sub-agent is stopped only after <code>timeout_secs</code> with no progress (no tool running, no model reply). Long work that keeps making progress runs to its end, bounded by its token budget.')}
 `
   },
   {
@@ -2083,10 +2139,20 @@ ${callout('warn', 'Timeout', 'Each sub-agent invocation has a hard timeout (<cod
 
 <h2>Parameters</h2>
 ${configTable([
-  ['tool', 'string', '—', 'Name of the CLI tool to invoke (e.g., "claude", "codex", "agy")'],
-  ['prompt', 'string', '—', 'The prompt/task to send to the CLI tool'],
-  ['working_dir', 'string', 'null', 'Working directory for command execution'],
+  ['action', 'string', '—', 'run, check, cancel or list (required)'],
+  ['tool', 'string', '—', 'Agent name, e.g. claude, codex, agy'],
+  ['prompt', 'string', '—', 'The task'],
+  ['title', 'string', '—', 'A few words shown on the run card'],
+  ['working_dir', 'string', '—', 'Absolute directory; readable, not writable by itself'],
+  ['workspace_mode', 'string', '—', 'read_only or read_write'],
+  ['write_paths', 'array', '—', 'Files/folders a read_write run may change (required for read_write)'],
+  ['read_paths', 'array', '—', 'Extra readable paths'],
+  ['scope', 'array', '—', 'Files or folders the run will change'],
+  ['new_folders', 'array', '—', 'New folders created for the run'],
+  ['async_mode', 'bool', 'false', 'Run in the background'],
+  ['system_instruction', 'string', '—', 'Shape the agent into a specialist'],
 ])}
+<p><code>manage_cli_agents</code> adds, removes, lists, enables and disables agents at runtime and shows run history, with no restart.</p>
 
 <h2>Discovered Agents</h2>
 <p>When <code>cli_agents.enabled = true</code> with no explicit tool configs, these are registered if their command is installed:</p>
@@ -2118,7 +2184,7 @@ ${configTable([
 <p>Claude Code and Codex ask AIDaemon instead of refusing on their own, so your grants answer what they cover and a card asks the rest. Settings also shows whether each agent can work now (<strong>Ready</strong>, or <strong>Not usable</strong> with its reason and fix, and <strong>Check again</strong>); work is never routed to an agent that cannot run.</p>
 
 <h2>Any Agent Client Protocol agent</h2>
-<p>An agent that speaks the <a href="https://agentclientprotocol.com" target="_blank" rel="noopener">Agent Client Protocol</a> can be added under <code>[cli_agents.tools.&lt;name&gt;]</code> with <code>protocol = "acp"</code>. aidaemon hosts it over the protocol, and each action it takes is asked first, so every one can be judged.</p>
+<p>An agent that speaks the <a href="https://agentclientprotocol.com" target="_blank" rel="noopener">Agent Client Protocol</a> can be added under <code>[cli_agents.tools.&lt;name&gt;]</code> with <code>protocol = "acp"</code>. AIDaemon hosts it over the protocol, and each action it takes is asked first, so every one can be judged.</p>
 ${codeBlock(`[cli_agents.tools.my-acp-agent]
 command = "my-acp-agent"
 args = ["--acp"]            # whatever starts its protocol server
@@ -2133,7 +2199,7 @@ max_output_chars = 16000
 
 [cli_agents.tools.claude]
 command = "claude"
-args = ["-p", "--output-format", "json"]
+args = ["-p", "--output-format", "stream-json", "--verbose"]
 description = "Claude Code for coding tasks"
 
 [cli_agents.tools.custom-tool]
@@ -2156,10 +2222,10 @@ timeout_secs = 120`, 'toml', 'config.toml')}
     slug: '/tools/web-search',
     section: 'Tools',
     title: 'Web Search Tool',
-    description: 'Search the web via DuckDuckGo or Brave and return titles, URLs, and snippets to the LLM agent.',
+    description: 'Search the web via DuckDuckGo, Brave or SearxNG in parallel and return merged titles, URLs, and snippets.',
     content: () => `
 <h1>Web Search Tool</h1>
-<p class="lead">Search the web and return titles, URLs, and snippets. Supports DuckDuckGo (default, no key needed) and Brave backends.</p>
+<p class="lead">Search the web and return titles, URLs, and snippets. Supports DuckDuckGo (default, no key needed), Brave and a self-hosted SearxNG. By default every configured backend is searched in parallel and the results are merged and deduplicated.</p>
 
 <h2>Tool Name</h2>
 <p><code>web_search</code></p>
@@ -2167,7 +2233,8 @@ timeout_secs = 120`, 'toml', 'config.toml')}
 <h2>Parameters</h2>
 ${configTable([
   ['query', 'string', '—', 'The search query (required)'],
-  ['max_results', 'integer', '5', 'Maximum number of results to return'],
+  ['max_results', 'integer', '8', 'Maximum merged results (max 20)'],
+  ['freshness', 'string', '—', 'Only results from the last day, week, month or year'],
 ])}
 
 <h2>Backends</h2>
@@ -2176,18 +2243,22 @@ ${configTable([
 <tbody>
 <tr><td><strong>DuckDuckGo</strong> (default)</td><td>Not required</td><td>Fetches <code>https://lite.duckduckgo.com/lite/</code> and parses HTML results</td></tr>
 <tr><td><strong>Brave</strong></td><td>Required</td><td>Calls <code>https://api.search.brave.com/res/v1/web/search</code> JSON API</td></tr>
+<tr><td><strong>SearxNG</strong></td><td>Not required</td><td>Your own instance at <code>search.searxng_url</code></td></tr>
 </tbody>
 </table>
 
 <h2>Configuration</h2>
 ${codeBlock(`[search]
-backend = "duckduckgo"  # or "brave"
-api_key = ""            # Required only for Brave`, 'toml', 'config.toml')}
+backend = "duckduckgo"   # or "brave", "searxng"
+api_key = "keychain"     # Brave only; store it with: aidaemon keychain set search_api_key
+searxng_url = ""         # e.g. "http://localhost:8080"
+parallel = true          # search every configured backend and merge`, 'toml', 'config.toml')}
 
 <h2>Output Format</h2>
-<p>Returns numbered markdown results:</p>
+<p>Returns numbered markdown results. The age and sources appear when known, or when several backends answered:</p>
 ${codeBlock(`1. [Page Title](https://example.com/page)
    A brief snippet describing the page content...
+   2 days ago · via brave, duckduckgo
 
 2. [Another Result](https://example.com/other)
    Another snippet...`, 'text')}
@@ -2208,11 +2279,13 @@ ${codeBlock(`1. [Page Title](https://example.com/page)
 <h2>Parameters</h2>
 ${configTable([
   ['url', 'string', '—', 'The URL to fetch (required)'],
-  ['max_chars', 'integer', '20000', 'Maximum characters to return'],
+  ['max_chars', 'integer', '20000', 'Maximum characters to return (max 50000)'],
+  ['offset', 'integer', '0', 'Characters to skip, to read past a truncated reply'],
 ])}
 
 <h2>Behavior</h2>
 <ol>
+  <li>Refuses private-network, loopback and cloud-metadata addresses, including after redirects. Use <code>http_request</code> for APIs.</li>
   <li>Fetches URL with browser-like headers (Firefox user-agent, standard Accept headers)</li>
   <li>Attempts readability extraction to get clean article text</li>
   <li>Falls back to full HTML-to-markdown conversion</li>
@@ -2226,23 +2299,24 @@ ${callout('info', 'Complements Browser Tool', 'Use <code>web_fetch</code> for qu
     slug: '/tools/send-file',
     section: 'Tools',
     title: 'File Transfer',
-    description: 'Send and receive files via Telegram or Slack. Path validation and sensitive file blocking built in.',
+    description: 'Send and receive files via Telegram, Slack, Discord or the app. Path validation and sensitive file blocking built in.',
     content: () => `
 <h1>File Transfer</h1>
-<p class="lead">Send files to the user via Telegram or Slack, and receive files from the user. Validates paths and blocks sensitive files.</p>
+<p class="lead">Send files to the user in the current chat (Telegram, Slack, Discord or the app), and receive files from the user. Validates paths and blocks sensitive files.</p>
 
 <h2>Tool Name</h2>
 <p><code>send_file</code> (outbound)</p>
 
 <h2>Parameters</h2>
 ${configTable([
-  ['file_path', 'string', '—', 'Absolute path to the file to send (required)'],
+  ['resource_id', 'string', '—', 'Handle (res_…) of an attachment or a file a tool created; preferred'],
+  ['file_path', 'string', '—', 'Exact absolute path, when there is no resource_id'],
   ['caption', 'string', 'null', 'Optional caption for the file'],
 ])}
 
 <h2>Configuration</h2>
 ${codeBlock(`[files]
-enabled = true
+enabled = true        # on by default
 inbox_dir = "~/.aidaemon/files/inbox"
 outbox_dirs = ["~"]
 max_file_size_mb = 10
@@ -2257,7 +2331,7 @@ retention_hours = 24`, 'toml', 'config.toml')}
 </ul>
 
 <h2>Inbound Files</h2>
-<p>Users can send files to the bot in Telegram or Slack. aidaemon downloads them to <code>inbox_dir</code> and makes them available to the agent. Supports documents, photos, audio, video, and voice messages, up to <code>max_file_size_mb</code>.</p>
+<p>Users can send files to the bot in any connected channel. AIDaemon downloads them to <code>inbox_dir</code> and makes them available to the agent. Supports documents, photos, audio, video, and voice messages, up to <code>max_file_size_mb</code>.</p>
 
 ${callout('warn', 'Outbox Directories', 'The <code>outbox_dirs</code> list controls which directories the agent can send files from. Keep it as narrow as possible in production.')}
 `
@@ -2269,17 +2343,17 @@ ${callout('warn', 'Outbox Directories', 'The <code>outbox_dirs</code> list contr
     description: 'A personal contact book managed by your AI assistant. Remembers birthdays, preferences, and relationships — all stored locally on your machine.',
     content: () => `
 <h1>People Intelligence</h1>
-<p class="lead">Think of it as a contact book, but with a personal assistant who remembers the details for you. Birthdays, preferences, communication styles, how you know someone &mdash; aidaemon keeps it all organized and reminds you when it matters. Everything lives on your computer or server, never sent to third parties.</p>
+<p class="lead">Think of it as a contact book, but with a personal assistant who remembers the details for you. Birthdays, preferences, communication styles, how you know someone &mdash; AIDaemon keeps it all organized and reminds you when it matters. Everything lives on your computer or server, never sent to third parties.</p>
 
 ${callout('info', 'Runtime Toggle', 'People Intelligence can be enabled or disabled at any time via chat. Just say <strong>"enable people intelligence"</strong> or use the <code>manage_people</code> tool with action <code>enable</code>/<code>disable</code>. No restart required.')}
 
 <h2>How It Works</h2>
 <ol>
-  <li><strong>Add contacts</strong> &mdash; manually add people or let aidaemon learn about them from conversations</li>
+  <li><strong>Add contacts</strong> &mdash; manually add people or let AIDaemon learn about them from conversations</li>
   <li><strong>Remember details</strong> &mdash; birthdays, preferences, interests, work info, and more</li>
   <li><strong>Link identities</strong> &mdash; connect a person to their Telegram, Slack, or Discord identity</li>
-  <li><strong>Proactive reminders</strong> &mdash; aidaemon naturally mentions upcoming birthdays and suggests reconnections</li>
-  <li><strong>Context adaptation</strong> &mdash; when a known person messages, aidaemon adapts its communication style</li>
+  <li><strong>Reminders on request</strong> &mdash; ask for upcoming birthdays and people to reconnect with</li>
+  <li><strong>Context adaptation</strong> &mdash; when a known person messages, AIDaemon adapts its communication style</li>
 </ol>
 
 <h2>Tool Name</h2>
@@ -2289,40 +2363,47 @@ ${callout('info', 'Runtime Toggle', 'People Intelligence can be enabled or disab
 <table class="config-table">
 <thead><tr><th>Action</th><th>Description</th><th>Required Params</th></tr></thead>
 <tbody>
+<tr><td><code>remember</code></td><td>Store people, names, aliases, family and places in personal memory. Always available, even with People Intelligence off.</td><td>personal_memory</td></tr>
 <tr><td><code>enable</code></td><td>Turn on People Intelligence (persists across restarts)</td><td>&mdash;</td></tr>
 <tr><td><code>disable</code></td><td>Turn off People Intelligence (data is preserved)</td><td>&mdash;</td></tr>
 <tr><td><code>status</code></td><td>Show enabled/disabled state and contact count</td><td>&mdash;</td></tr>
 <tr><td><code>add</code></td><td>Add a new person</td><td>name</td></tr>
 <tr><td><code>list</code></td><td>List all contacts (filter by relationship)</td><td>&mdash;</td></tr>
 <tr><td><code>view</code></td><td>View person details and all facts</td><td>name or id</td></tr>
+<tr><td><code>brief</code></td><td>A short brief on one person</td><td>name, person_name or id</td></tr>
+<tr><td><code>upcoming</code></td><td>Birthdays and important dates coming up</td><td>&mdash; (within_days)</td></tr>
+<tr><td><code>reconnect</code></td><td>People you have not been in touch with</td><td>&mdash; (inactive_days)</td></tr>
 <tr><td><code>update</code></td><td>Update person fields (relationship, notes, style)</td><td>name or id</td></tr>
 <tr><td><code>remove</code></td><td>Delete a person and all their facts</td><td>name or id</td></tr>
 <tr><td><code>add_fact</code></td><td>Store a fact about someone (birthday, preference, etc.)</td><td>person_name, category, key, value</td></tr>
 <tr><td><code>remove_fact</code></td><td>Delete a specific fact by ID</td><td>fact_id</td></tr>
 <tr><td><code>link</code></td><td>Link a platform identity to a person</td><td>person_name, platform_id</td></tr>
-<tr><td><code>export</code></td><td>Export all data for a person as JSON</td><td>person_name</td></tr>
-<tr><td><code>purge</code></td><td>Full cascade delete (person + facts + links)</td><td>person_name</td></tr>
-<tr><td><code>audit</code></td><td>Review auto-extracted facts (unverified)</td><td>&mdash; (or person_name)</td></tr>
-<tr><td><code>confirm</code></td><td>Verify an auto-extracted fact (set confidence to 100%)</td><td>fact_id</td></tr>
+<tr><td><code>export</code></td><td>Export all data for a person as JSON</td><td>person_name or name</td></tr>
+<tr><td><code>purge</code></td><td>Full cascade delete (person + facts + links)</td><td>person_name or name</td></tr>
+<tr><td><code>audit</code></td><td>Review unconfirmed facts</td><td>&mdash; (or person_name)</td></tr>
+<tr><td><code>confirm</code></td><td>Verify an unconfirmed fact (set confidence to 100%)</td><td>fact_id</td></tr>
 </tbody>
 </table>
 
 <h2>Parameters</h2>
 ${configTable([
   ['action', 'string', '&mdash;', 'Action to perform (required)'],
-  ['name', 'string', 'null', "Person's name (for add, view, update, remove)"],
-  ['id', 'integer', 'null', "Person's database ID (for update, remove)"],
+  ['name', 'string', 'null', "Person's name (for add, view, brief, update, remove)"],
+  ['id', 'integer', 'null', "Person's database ID (for view, update, remove)"],
   ['relationship', 'string', 'null', 'Relationship type: spouse, family, friend, coworker, acquaintance'],
   ['notes', 'string', 'null', 'Free-form notes about the person'],
   ['communication_style', 'string', 'null', 'How to communicate: casual, formal, warm, etc.'],
   ['language', 'string', 'null', 'Preferred language for interaction'],
-  ['person_name', 'string', 'null', "Person's name (for add_fact, link, export, purge, audit)"],
+  ['person_name', 'string', 'null', "Person's name (for add_fact, link; export, purge and audit also accept name)"],
   ['category', 'string', 'null', 'Fact category: birthday, preference, interest, work, family, important_date, personality, gift_idea'],
   ['key', 'string', 'null', "Fact key (e.g., 'birthday', 'favorite_food')"],
-  ['value', 'string', 'null', 'Fact value'],
+  ['value', 'string', 'null', 'Fact value. For birthday or important_date an ISO date (YYYY-MM-DD, or --MM-DD without a year)'],
   ['platform_id', 'string', 'null', "Platform-qualified ID (e.g., 'slack:U123', 'telegram:456')"],
   ['display_name', 'string', 'null', 'Display name for the platform identity'],
   ['fact_id', 'integer', 'null', 'Fact ID (for remove_fact, confirm)'],
+  ['personal_memory', 'object', 'null', 'remember: people, aliases, facts and relationships'],
+  ['within_days', 'integer', 'null', 'upcoming: days ahead'],
+  ['inactive_days', 'integer', 'null', 'reconnect: days without contact'],
 ])}
 
 <h2>Enabling</h2>
@@ -2337,21 +2418,15 @@ ${codeBlock('You: "Enable people intelligence"\naidaemon: "People Intelligence e
 ${codeBlock('[people]\nenabled = true', 'toml', 'config.toml')}
 
 <h2>Organic Learning</h2>
-<p>When <code>auto_extract</code> is enabled (default), aidaemon automatically learns about people from conversations during its regular memory consolidation cycle:</p>
-<ul>
-  <li>Detects mentions of people, their preferences, birthdays, and relationships</li>
-  <li>Creates person records and stores facts with 70% confidence (auto-extracted)</li>
-  <li>Owner can review and confirm facts via the <code>audit</code> and <code>confirm</code> actions</li>
-</ul>
+<p>During memory consolidation, AIDaemon records the people you mention (names, nicknames, birthdays, family and where they live) in personal memory, the same store <code>remember</code> writes. Contact-book facts are added with <code>add_fact</code>; <code>audit</code> and <code>confirm</code> review any unconfirmed ones.</p>
 
-${callout('warn', 'Restricted Categories', 'Health info, financial details, political opinions, and religious beliefs are <strong>never</strong> auto-extracted, even if mentioned in conversation. This is enforced by <code>restricted_categories</code>.')}
+${callout('warn', 'Sensitive Details', 'Health and financial details are not stored as contact facts.')}
 
 <h2>Background Tasks</h2>
-<p>When enabled, aidaemon runs daily background checks:</p>
+<p>When enabled, AIDaemon runs daily background checks:</p>
 <ul>
-  <li><strong>Stale fact pruning</strong> &mdash; removes unconfirmed auto-extracted facts older than <code>fact_retention_days</code> (default 180)</li>
-  <li><strong>Upcoming date reminders</strong> &mdash; detects birthdays and important dates within 14 days</li>
-  <li><strong>Reconnect suggestions</strong> &mdash; flags people who haven't been contacted in <code>reconnect_reminder_days</code> (default 30)</li>
+  <li><strong>Stale fact pruning</strong> &mdash; removes unconfirmed facts older than <code>fact_retention_days</code> (default 180)</li>
+  <li><strong>Upcoming dates and reconnects</strong> &mdash; checked daily and logged; ask for them any time with the <code>upcoming</code> and <code>reconnect</code> actions (reconnect uses <code>reconnect_reminder_days</code>, default 30)</li>
 </ul>
 
 <h2>Privacy Model</h2>
@@ -2365,15 +2440,13 @@ ${callout('warn', 'Restricted Categories', 'Health info, financial details, poli
 </table>
 
 <h2>Configuration</h2>
-${codeBlock('[people]\nenabled = true\nauto_extract = true\nauto_extract_categories = ["birthday", "preference", "interest", "work", "family", "important_date"]\nrestricted_categories = ["health", "finance", "political", "religious"]\nfact_retention_days = 180\nreconnect_reminder_days = 30', 'toml', 'config.toml')}
+${codeBlock('[people]\nenabled = true\nfact_retention_days = 180\nreconnect_reminder_days = 30', 'toml', 'config.toml')}
 
 ${configTable([
   ['enabled', 'bool', 'false', 'Initial state (can be toggled at runtime via chat)'],
-  ['auto_extract', 'bool', 'true', 'Learn facts about people from conversations automatically'],
-  ['auto_extract_categories', 'string[]', '[...]', 'Categories that can be auto-extracted'],
-  ['restricted_categories', 'string[]', '[...]', 'Categories that are never auto-extracted'],
   ['fact_retention_days', 'integer', '180', 'Days before unconfirmed facts are pruned'],
   ['reconnect_reminder_days', 'integer', '30', 'Days of inactivity before suggesting a reconnect'],
+  ['auto_extract, auto_extract_categories, restricted_categories', '—', '—', 'Accepted but not used'],
 ])}
 `
   },
@@ -2381,40 +2454,49 @@ ${configTable([
     slug: '/mcp',
     section: 'MCP',
     title: 'MCP Overview',
-    description: 'Extend aidaemon with Model Context Protocol servers for filesystem access, databases, APIs, and more.',
+    description: 'Extend AIDaemon with Model Context Protocol servers for filesystem access, databases, APIs, and more.',
     content: () => `
 <h1>MCP Integration</h1>
-<p class="lead">Extend aidaemon with any <a href="https://modelcontextprotocol.io" target="_blank" rel="noopener">Model Context Protocol</a> server to add filesystem access, databases, APIs, and more.</p>
+<p class="lead">Extend AIDaemon with any <a href="https://modelcontextprotocol.io" target="_blank" rel="noopener">Model Context Protocol</a> server to add filesystem access, databases, APIs, and more.</p>
 
 <h2>How It Works</h2>
 <ol>
-  <li>aidaemon spawns each configured MCP server as a subprocess</li>
+  <li>AIDaemon spawns each configured MCP server as a subprocess</li>
   <li>Communicates via JSON-RPC 2.0 over stdin/stdout</li>
   <li>Calls <code>tools/list</code> to discover available tools</li>
-  <li>Each discovered tool is wrapped as a native aidaemon <code>Tool</code></li>
-  <li>The LLM can call MCP tools the same way as built-in tools</li>
+  <li>Each discovered tool is offered as <code>&lt;server&gt;__&lt;tool&gt;</code> (e.g. <code>github__create_issue</code>)</li>
+  <li>The model can call MCP tools the same way as built-in tools</li>
 </ol>
 
 <h2>Protocol Details</h2>
 <ul>
-  <li><strong>Protocol version:</strong> 2024-11-05</li>
-  <li><strong>Client info:</strong> name="aidaemon", version="0.1.0"</li>
+  <li><strong>Protocol version:</strong> asks for 2025-06-18; accepts 2025-03-26 and 2024-11-05</li>
+  <li><strong>Client info:</strong> name="aidaemon", version = the daemon's version</li>
   <li><strong>Transport:</strong> line-delimited JSON over stdin/stdout</li>
   <li><strong>Initialization:</strong> <code>initialize</code> request → <code>notifications/initialized</code></li>
+</ul>
+
+<h2>Safety</h2>
+<ul>
+  <li>Only safe variables (PATH, HOME, LANG&hellip;) pass from the daemon&rsquo;s environment to a server; anything else must be set explicitly.</li>
+  <li>MCP output is treated as untrusted, and calls are judged at their worst (approval may be asked) unless you list the tool in <code>read_only_tools</code>.</li>
 </ul>
 
 <h2>Example</h2>
 ${codeBlock(`[mcp.filesystem]
 command = "npx"
-args = ["-y", "@anthropic/mcp-filesystem", "/home/user/documents"]
+args = ["-y", "@modelcontextprotocol/server-filesystem", "/home/user/documents"]
 
 [mcp.sqlite]
-command = "npx"
-args = ["-y", "@anthropic/mcp-sqlite", "my-database.db"]
+command = "uvx"
+args = ["mcp-server-sqlite", "--db-path", "my-database.db"]
 
 [mcp.github]
 command = "npx"
 args = ["-y", "@modelcontextprotocol/server-github"]`, 'toml', 'config.toml')}
+
+<h2>Adding servers at runtime</h2>
+<p>The <code>manage_mcp</code> tool adds, lists, removes, restarts, enables and disables servers without a restart. Added servers are saved and reloaded at startup. Commands are limited to <code>npx</code>, <code>uvx</code>, <code>node</code>, <code>python</code> and <code>python3</code>. A secret variable is bound with <code>set_env</code> to a keychain entry named <code>mcp_&lt;server&gt;_&lt;KEY&gt;</code>, which you store with <code>aidaemon keychain set</code>. In a project conversation, <code>project_list</code>, <code>project_start</code> and <code>project_stop</code> run servers from the project&rsquo;s <code>.mcp.json</code> for that project only.</p>
 
 ${callout('info', 'Error Handling', 'If an MCP server fails to start or list tools, the error is logged but other servers and built-in tools continue to work.')}
 `
@@ -2423,7 +2505,7 @@ ${callout('info', 'Error Handling', 'If an MCP server fails to start or list too
     slug: '/mcp/configuration',
     section: 'MCP',
     title: 'MCP Server Config',
-    description: 'Configure MCP servers in aidaemon config.toml. Stdio and SSE transport, environment variables, and timeouts.',
+    description: 'Configure MCP servers in AIDaemon config.toml: stdio servers, environment variables and read-only tools.',
     content: () => `
 <h1>MCP Server Configuration</h1>
 <p class="lead">Each MCP server is defined as a named section under <code>[mcp]</code> in config.toml.</p>
@@ -2431,11 +2513,15 @@ ${callout('info', 'Error Handling', 'If an MCP server fails to start or list too
 <h2>Config Format</h2>
 ${codeBlock(`[mcp.<server-name>]
 command = "<executable>"
-args = ["arg1", "arg2", ...]`, 'toml')}
+args = ["arg1", "arg2", ...]
+env = { KEY = "value" }
+read_only_tools = ["search"]`, 'toml')}
 
 ${configTable([
   ['command', 'string', '—', 'Executable or script to launch the MCP server'],
   ['args', 'array', '[]', 'Arguments passed to the command'],
+  ['env', 'table', '{}', 'Environment variables for the server (only safe ones are inherited otherwise)'],
+  ['read_only_tools', 'array', '[]', 'Tools you declare read-only, by their tools/list name; their calls need no approval'],
 ])}
 
 <h2>Discovery Process</h2>
@@ -2443,31 +2529,34 @@ ${configTable([
   <li>For each <code>[mcp.*]</code> section, spawn the process with the configured command and args</li>
   <li>Initialize the JSON-RPC connection (protocol handshake)</li>
   <li>Call <code>tools/list</code> to enumerate available tools</li>
-  <li>Wrap each tool's name, description, and input schema as a native Tool</li>
+  <li>Offer each tool to the model as <code>&lt;server&gt;__&lt;tool&gt;</code> with the server&rsquo;s description and input schema</li>
   <li>Log any errors per-server without failing globally</li>
 </ol>
+<p>Servers can also be added while AIDaemon runs, with the <code>manage_mcp</code> tool. See <a href="/mcp">MCP Overview</a>.</p>
 
 <h2>Examples</h2>
 
 <h3>Filesystem Access</h3>
 ${codeBlock(`[mcp.filesystem]
 command = "npx"
-args = ["-y", "@anthropic/mcp-filesystem", "/home/user/projects"]`, 'toml')}
+args = ["-y", "@modelcontextprotocol/server-filesystem", "/home/user/projects"]`, 'toml')}
 
 <h3>Web Search</h3>
 ${codeBlock(`[mcp.brave-search]
 command = "npx"
-args = ["-y", "@anthropic/mcp-brave-search"]`, 'toml')}
+args = ["-y", "@modelcontextprotocol/server-brave-search"]
+env = { BRAVE_API_KEY = "…" }`, 'toml')}
+<p>To keep the key out of config.toml, bind it to a keychain value with <code>manage_mcp</code> <code>set_env</code> (a keychain entry named <code>mcp_&lt;server&gt;_&lt;KEY&gt;</code>, which you store with <code>aidaemon keychain set</code>).</p>
 
 <h3>Custom Python Server</h3>
 ${codeBlock(`[mcp.my-server]
 command = "python3"
 args = ["/path/to/my_mcp_server.py"]`, 'toml')}
 
-${callout('info', 'Stderr Logging', 'MCP server stderr output is captured and logged by aidaemon for debugging. Check the daemon logs if a server isn\'t working.')}
+${callout('info', 'Stderr Logging', 'MCP server stderr output is captured and logged by AIDaemon for debugging. Check the daemon logs if a server isn\'t working.')}
 
 <h2>Threat Detection</h2>
-<p>aidaemon performs audit-only threat detection on MCP tool calls. Suspicious patterns are logged but <strong>do not block execution</strong>.</p>
+<p>AIDaemon performs audit-only threat detection on MCP tool calls. Suspicious patterns are logged but <strong>do not block execution</strong>. Separately, every MCP call goes through the normal approval policy, and its output is treated as untrusted.</p>
 
 <h3>Suspicious Argument Patterns</h3>
 <ul>
